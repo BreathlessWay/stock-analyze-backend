@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { AuthGuard } from '../guards/auth.guard';
+import { AuthGuard } from '../../guards/auth.guard';
 // import { FileSizeValidationPipe } from '../pipe/fileValidation.pipe';
 
 import type { Response } from 'express';

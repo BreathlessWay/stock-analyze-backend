@@ -9,7 +9,7 @@ import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
-import { UserModule } from './Users/user.module';
+import { UserModule } from './modules/Users/user.module';
 
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 
