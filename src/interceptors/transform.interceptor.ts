@@ -1,4 +1,4 @@
-import { UnauthorizedException, Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { catchError, Observable, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -21,7 +21,7 @@ export class TransformInterceptor<T>
     next: CallHandler,
   ): Observable<Response<T>> {
     return next.handle().pipe(
-      catchError(() => throwError(() => new UnauthorizedException())),
+      catchError((err) => throwError(() => new BadRequestException(err))),
       map((data) => {
         return { data };
       }),

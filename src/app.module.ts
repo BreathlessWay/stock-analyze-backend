@@ -38,7 +38,7 @@ import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
           port: +configService.get('DATABASE_PORT'),
           username: configService.get('DATABASE_USER'),
           password: configService.get('DATABASE_PASSWORD'),
-          database: 'stock_analyze',
+          database: 'db',
           synchronize: process.env.NODE_ENV === 'production',
           autoLoadModels: true,
         };
