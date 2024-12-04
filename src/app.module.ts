@@ -2,9 +2,9 @@ import { resolve } from 'node:path';
 
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MulterModule } from '@nestjs/platform-express';
 import { SequelizeModule } from '@nestjs/sequelize';
 import * as Joi from 'joi';
-import { MulterModule } from '@nestjs/platform-express';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -23,20 +23,26 @@ import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
       validationSchema: Joi.object({
         NODE_ENV: Joi.string().valid('development', 'production').required(),
         PROJECT_PORT: Joi.number().port().required(),
+        DATABASE_HOST: Joi.string().required(),
+        DATABASE_PORT: Joi.number().port().required(),
+        DATABASE_USER: Joi.string().required(),
+        DATABASE_PASSWORD: Joi.string().required(),
       }),
     }),
     SequelizeModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        dialect: 'mysql',
-        host: 'localhost',
-        port: 3306,
-        username: configService.get('DATABASE_USER'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: 'stock-analyze',
-        synchronize: process.env.NODE_ENV === 'production',
-        autoLoadModels: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        return {
+          dialect: 'mysql',
+          host: configService.get('DATABASE_HOST'),
+          port: +configService.get('DATABASE_PORT'),
+          username: configService.get('DATABASE_USER'),
+          password: configService.get('DATABASE_PASSWORD'),
+          database: 'stock_analyze',
+          synchronize: process.env.NODE_ENV === 'production',
+          autoLoadModels: true,
+        };
+      },
       inject: [ConfigService],
     }),
     MulterModule.registerAsync({

@@ -22,8 +22,13 @@ export class UserController {
   ) {}
 
   @Get()
-  login1(@Res({ passthrough: true }) res: Response, @Query() query: UserDto) {
-    const data = this.userService.login(query);
+  async login1(
+    @Res({ passthrough: true }) res: Response,
+    @Query() query: UserDto,
+  ) {
+    console.log(query.username);
+
+    const data = await this.userService.login(query);
     console.log(
       process.env.PROJECT_PORT,
       process.env.NODE_ENV,

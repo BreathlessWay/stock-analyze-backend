@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Sequelize } from 'sequelize';
 import { InjectModel } from '@nestjs/sequelize';
+// The Sequelize class is imported from the sequelize-typescript package.
+import { Sequelize } from 'sequelize-typescript';
 
 import { UserModel } from './user.model';
 
@@ -19,12 +20,9 @@ export class UserService {
     password: '122',
   };
 
-  login(user: UserDto): Promise<UserModel | null> {
+  async login(user: UserDto): Promise<UserDto | null> {
     return this.userModel.findOne({
-      where: {
-        username: user.username,
-        password: user.password,
-      },
+      where: { username: user.username, password: user.password },
     });
   }
 
