@@ -21,4 +21,10 @@ export class UserModel extends Model {
     allowNull: false,
   })
   passwd: string;
+
+  @Column({
+    type: DataType.STRING,
+    defaultValue: '',
+  })
+  uploadFilePath: string;
 }

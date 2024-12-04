@@ -1,6 +1,13 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  // Get, Query
+} from '@nestjs/common';
 
 import { UserService } from './user.service';
+
+import { aesEncrypt } from '../../utils';
 
 import type { UserDto } from './user.dto';
 
@@ -8,17 +15,37 @@ import type { UserDto } from './user.dto';
 export class UserController {
   constructor(private userService: UserService) {}
 
+  // 9d25b4226ef057e5a1a05bcadf5c7ada
+  // @Get()
+  // async register1(@Query() userDto: UserDto) {
+  //   const res = await this.userService.register(userDto);
+  //   if (res) {
+  //     return {
+  //       token: aesEncrypt(res.operName),
+  //     };
+  //   }
+  //   throw '用户注册失败';
+  // }
+
   @Post()
   async login(@Body() userDto: UserDto) {
     const res = await this.userService.login(userDto);
     if (res) {
-      return res;
+      return {
+        token: aesEncrypt(res.operName),
+      };
     }
     throw '用户尚未注册';
   }
 
   @Post()
   async register(@Body() userDto: UserDto) {
-    return await this.userService.register(userDto);
+    const res = await this.userService.register(userDto);
+    if (res) {
+      return {
+        token: aesEncrypt(res.operName),
+      };
+    }
+    throw '用户注册失败';
   }
 }
