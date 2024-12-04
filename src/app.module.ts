@@ -1,5 +1,3 @@
-import { resolve } from 'node:path';
-
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
@@ -15,6 +13,7 @@ import { AnalyzeModule } from './modules/Earnings/analyze.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Upload_Folder_Path } from './constants';
 
 @Module({
   imports: [
@@ -48,7 +47,7 @@ import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
     }),
     MulterModule.registerAsync({
       useFactory: () => ({
-        dest: resolve(process.cwd(), 'upload'),
+        dest: Upload_Folder_Path,
       }),
     }),
     UserModule,

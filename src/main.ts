@@ -10,8 +10,12 @@ import { AppModule } from './app.module';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 
+import { Statics_Folder_Path } from './constants';
+
+import type { NestExpressApplication } from '@nestjs/platform-express';
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
@@ -23,6 +27,9 @@ async function bootstrap() {
     }),
   );
   app.use(cookieParser(), compression(), helmet());
+  app.useStaticAssets(Statics_Folder_Path, {
+    prefix: '/statics/', //设置虚拟前缀路径
+  });
   app.enableCors();
 
   const configService = app.get(ConfigService);

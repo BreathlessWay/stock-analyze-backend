@@ -38,7 +38,6 @@ export class UserService {
     operName,
     uploadFilePath,
   }: Pick<UserDto, 'operName'> & { uploadFilePath: string }) {
-    console.log(uploadFilePath, operName);
     return await this.userModel.update(
       {
         uploadFilePath,

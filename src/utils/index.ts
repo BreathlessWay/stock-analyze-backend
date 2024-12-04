@@ -1,4 +1,9 @@
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as multer from 'multer';
+
+import { Upload_Folder_Path } from '../constants';
 
 // 3 定义 key 和 iv
 const aesKey = 'abcdef0123456789';
@@ -35,3 +40,17 @@ export const aesDecrypt = (crypted: string, key = aesKey, iv = aesIv) => {
   // 返回明文
   return decrypted;
 };
+
+export const storageFile = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(Upload_Folder_Path)) {
+      fs.mkdirSync(Upload_Folder_Path);
+    }
+    cb(null, Upload_Folder_Path);
+  },
+  filename: (req, file, cb) => {
+    let filename = aesDecrypt(req.headers.token as string);
+    filename = filename + path.extname(file.originalname);
+    cb(null, filename);
+  },
+});
