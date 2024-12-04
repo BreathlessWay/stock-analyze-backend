@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  // Get, Query
-} from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 
 import { UserService } from './user.service';
 
@@ -16,16 +11,6 @@ export class UserController {
   constructor(private userService: UserService) {}
 
   // 9d25b4226ef057e5a1a05bcadf5c7ada
-  // @Get()
-  // async register1(@Query() userDto: UserDto) {
-  //   const res = await this.userService.register(userDto);
-  //   if (res) {
-  //     return {
-  //       token: aesEncrypt(res.operName),
-  //     };
-  //   }
-  //   throw '用户注册失败';
-  // }
 
   @Post()
   async login(@Body() userDto: UserDto) {

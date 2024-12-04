@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 import { UserModule } from './modules/Users/user.module';
+import { AnalyzeModule } from './modules/Earnings/analyze.module';
 
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 
@@ -51,6 +52,7 @@ import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
       }),
     }),
     UserModule,
+    AnalyzeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

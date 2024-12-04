@@ -1,8 +1,5 @@
 import {
   Controller,
-  Get,
-  Res,
-  HttpStatus,
   UseGuards,
   UploadedFile,
   Post,
@@ -10,20 +7,39 @@ import {
   FileTypeValidator,
   ParseFilePipe,
   MaxFileSizeValidator,
+  Delete,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { AuthGuard } from '../../guards/auth.guard';
-// import { FileSizeValidationPipe } from '../pipe/fileValidation.pipe';
+import { UserService } from '../Users/user.service';
 
-import type { Response } from 'express';
+import { aesDecrypt } from '../../utils';
+// import { FileSizeValidationPipe } from '../pipe/fileValidation.pipe';
 
 @Controller('earnings')
 @UseGuards(AuthGuard)
-export class UserController {
-  @Get('analyze')
-  login1(@Res() res: Response) {
-    res.status(HttpStatus.OK).send('data');
+export class AnalyzeController {
+  constructor(private userService: UserService) {}
+
+  @Delete('analyze_file')
+  async removeFile(@Headers('token') token: string) {
+    let operName: string;
+    try {
+      operName = aesDecrypt(token);
+    } catch (e) {
+      throw new UnauthorizedException('用户验证失败', e);
+    }
+    const res = await this.userService.updateFilePath({
+      operName,
+      uploadFilePath: '',
+    });
+    if (res) {
+      return true;
+    }
+    throw '删除文件失败';
   }
 
   @Post('file')
