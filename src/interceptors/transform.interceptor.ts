@@ -23,7 +23,7 @@ export class TransformInterceptor<T>
     return next.handle().pipe(
       catchError((err) => throwError(() => new BadRequestException(err))),
       map((data) => {
-        return { data };
+        return { data, code: 0, msg: 'ok' };
       }),
     );
   }

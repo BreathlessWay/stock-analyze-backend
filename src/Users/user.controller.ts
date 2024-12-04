@@ -1,52 +1,24 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Res,
-  Body,
-  HttpStatus,
-  Query,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Controller, Post, Body } from '@nestjs/common';
 
 import { UserService } from './user.service';
 
-import type { Response } from 'express';
 import type { UserDto } from './user.dto';
 
 @Controller('user')
 export class UserController {
-  constructor(
-    private configService: ConfigService,
-    private userService: UserService,
-  ) {}
-
-  @Get()
-  async login1(
-    @Res({ passthrough: true }) res: Response,
-    @Query() query: UserDto,
-  ) {
-    console.log(query.username);
-
-    const data = await this.userService.login(query);
-    console.log(
-      process.env.PROJECT_PORT,
-      process.env.NODE_ENV,
-      this.configService.get<string>('DATABASE_USER'),
-    );
-    res.status(HttpStatus.OK);
-    return data;
-  }
+  constructor(private userService: UserService) {}
 
   @Post()
-  login(@Body() userDto: UserDto) {
-    console.log(userDto);
-    return 'This action adds a new cat';
+  async login(@Body() userDto: UserDto) {
+    const res = await this.userService.login(userDto);
+    if (res) {
+      return res;
+    }
+    throw '用户尚未注册';
   }
 
   @Post()
   async register(@Body() userDto: UserDto) {
-    console.log(userDto);
-    return 'This action adds a new cat';
+    return await this.userService.register(userDto);
   }
 }

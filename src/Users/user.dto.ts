@@ -2,8 +2,8 @@ import { IsNotEmpty } from 'class-validator';
 
 export class UserDto {
   @IsNotEmpty()
-  username: string;
+  operName: string;
 
   @IsNotEmpty()
-  password: string;
+  passwd: string;
 }

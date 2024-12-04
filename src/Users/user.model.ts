@@ -1,10 +1,24 @@
-import { Column, Model, Table } from 'sequelize-typescript';
+import {
+  Column,
+  DataType,
+  Model,
+  PrimaryKey,
+  Table,
+} from 'sequelize-typescript';
 
-@Table
+@Table({
+  tableName: 'operatorInfo',
+})
 export class UserModel extends Model {
-  @Column
-  username: string;
+  @PrimaryKey
+  @Column({
+    type: DataType.STRING,
+  })
+  operName: string;
 
-  @Column
-  password: string;
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+  })
+  passwd: string;
 }

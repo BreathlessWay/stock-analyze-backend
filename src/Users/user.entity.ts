@@ -6,10 +6,10 @@ export class User {
   id: number;
 
   @Column()
-  username: string;
+  operName: string;
 
   @Column()
-  password: string;
+  passwd: string;
 }
 
 export const UserSchema = new EntitySchema<User>({
@@ -21,10 +21,10 @@ export const UserSchema = new EntitySchema<User>({
       primary: true,
       generated: true,
     },
-    username: {
+    operName: {
       type: String,
     },
-    password: {
+    passwd: {
       type: String,
     },
   },
