@@ -15,7 +15,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
-    // new TransformInterceptor(),
+    new TransformInterceptor(),
   );
   app.useGlobalPipes(
     new ValidationPipe({
