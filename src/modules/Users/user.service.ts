@@ -44,7 +44,7 @@ export class UserService {
       },
       {
         where: {
-          operName: operName,
+          operName,
         },
       },
     );

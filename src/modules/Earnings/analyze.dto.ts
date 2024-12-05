@@ -12,3 +12,11 @@ export class AnalyzerQueryDto {
   @IsString()
   end_date: string;
 }
+
+export type StockQueryDto = {
+  stockCode: string[];
+
+  start_date: string;
+
+  end_date: string;
+};

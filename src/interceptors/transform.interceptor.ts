@@ -23,6 +23,7 @@ export class TransformInterceptor<T>
     return next.handle().pipe(
       catchError((err) =>
         throwError(() => {
+          console.log(err);
           if (err?.response?.statusCode) {
             return err;
           }

@@ -12,8 +12,9 @@ import { AnalyzeModule } from './modules/Earnings/analyze.module';
 
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 
-import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { Upload_Folder_Path } from './constants';
+
+import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 
 @Module({
   imports: [

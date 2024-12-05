@@ -7,47 +7,49 @@ import {
 } from 'sequelize-typescript';
 
 @Table({
-  tableName: 'closePriceInfo',
+  tableName: 'closepriceinfo',
+  createdAt: false,
+  updatedAt: false,
 })
 export class StockPriceModel extends Model {
   @PrimaryKey
   @Column({
     type: DataType.STRING,
   })
-  operName: string;
+  tradeDate: string;
 
+  @PrimaryKey
   @Column({
     type: DataType.STRING,
-    allowNull: false,
   })
-  passwd: string;
+  stockCode: string;
 
   @Column({
-    type: DataType.STRING,
-    defaultValue: '',
+    type: DataType.NUMBER,
   })
-  uploadFilePath: string;
+  price: number;
 }
 
 @Table({
-  tableName: 'stockProfitDetialInfo',
+  tableName: 'stockprofitdetialinfo',
+  createdAt: false,
+  updatedAt: false,
 })
 export class StockProfitModel extends Model {
   @PrimaryKey
   @Column({
     type: DataType.STRING,
   })
-  operName: string;
+  tradeDate: string;
 
+  @PrimaryKey
   @Column({
     type: DataType.STRING,
-    allowNull: false,
   })
-  passwd: string;
+  stockCode: string;
 
   @Column({
-    type: DataType.STRING,
-    defaultValue: '',
+    type: DataType.NUMBER,
   })
-  uploadFilePath: string;
+  profitRatio: number;
 }

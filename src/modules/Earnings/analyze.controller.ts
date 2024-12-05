@@ -20,9 +20,11 @@ import * as ExcelJS from 'exceljs';
 import { parse as CsvParse } from 'csv-parse';
 import * as Joi from 'joi';
 import { fromPairs } from 'lodash';
+import * as dayjs from 'dayjs';
 
 import { AuthGuard } from '../../guards/auth.guard';
 import { UserService } from '../Users/user.service';
+import { AnalyzeService } from './analyze.service';
 
 import { aesDecrypt, storageFile } from '../../utils';
 
@@ -38,7 +40,10 @@ import {
 @Controller('earnings')
 @UseGuards(AuthGuard)
 export class AnalyzeController {
-  constructor(private userService: UserService) {}
+  constructor(
+    private analyzeService: AnalyzeService,
+    private userService: UserService,
+  ) {}
 
   getOperName(token: string) {
     try {
@@ -82,7 +87,7 @@ export class AnalyzeController {
     const rowMap: Record<string, number> = fromPairs(rows);
     return {
       stockCodeList: Object.keys(rowMap),
-      stockCountList: Object.values(rowMap),
+      stockCountMap: rowMap,
       msg,
     };
   }
@@ -118,7 +123,7 @@ export class AnalyzeController {
           const rowMap: Record<string, number> = fromPairs(result);
           resolve({
             stockCodeList: Object.keys(rowMap),
-            stockCountList: Object.values(rowMap),
+            stockCountMap: rowMap,
             msg,
           });
         })
@@ -187,25 +192,46 @@ export class AnalyzeController {
   ) {
     const operName = this.getOperName(token);
     const { stock_code } = query;
+    let parseResult: {
+      stockCodeList: string[];
+      stockCountMap: Record<string, number>;
+      msg: string;
+    };
     if (!stock_code) {
       const res = await this.userService.findUser(operName);
       if (!res?.uploadFilePath) {
         throw '请添加需要分析的股票代码';
       }
       const fileFullPath = join(Project_Folder_Path, res.uploadFilePath);
-      let parseResult: {
-        stockCodeList: string[];
-        stockCountList: number[];
-        msg: string;
-      };
+
       if (fileFullPath.endsWith('xlsx')) {
         parseResult = await this.parseExcel(fileFullPath);
       }
       if (fileFullPath.endsWith('csv')) {
         parseResult = await this.parseCsv(fileFullPath);
       }
-
-      return parseResult;
+    } else {
+      parseResult = {
+        stockCodeList: [stock_code],
+        msg: '',
+        stockCountMap: null,
+      };
     }
+
+    const { stockCodeList, stockCountMap, msg } = parseResult;
+
+    const result = await this.analyzeService.findStock(
+      {
+        stockCode: stockCodeList,
+        start_date: dayjs(Number(query.start_date)).format('YYYYMMDD'),
+        end_date: dayjs(Number(query.end_date)).format('YYYYMMDD'),
+      },
+      stockCountMap,
+    );
+
+    return {
+      msg,
+      ...result,
+    };
   }
 }
