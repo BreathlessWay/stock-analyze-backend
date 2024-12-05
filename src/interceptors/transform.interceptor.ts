@@ -26,13 +26,16 @@ export class TransformInterceptor<T>
           if (err?.response?.statusCode) {
             return err;
           }
+          if (err.name) {
+            return new BadRequestException(err.name, err);
+          }
           return new BadRequestException(err);
         }),
       ),
       map((data) => {
-        const result = { data, code: 0, msg: 'ok' };
+        const result = { data, statusCode: HttpStatus.OK, message: 'ok' };
         if (data?.msg) {
-          result.msg = data?.msg;
+          result.message = data?.msg;
           delete data.msg;
         }
         return result;
