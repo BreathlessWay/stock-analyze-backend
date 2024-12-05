@@ -7,8 +7,8 @@ export class AnalyzerQueryDto {
   stock_code?: string;
 
   @IsString()
-  start_date: Date;
+  start_date: string;
 
   @IsString()
-  end_date: Date;
+  end_date: string;
 }
