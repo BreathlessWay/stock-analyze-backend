@@ -5,7 +5,7 @@ import { Sequelize } from 'sequelize-typescript';
 
 import { UserModel } from './user.model';
 
-import type { UserDto } from './user.dto';
+import { UserDto } from './user.dto';
 
 @Injectable()
 export class UserService {
@@ -15,9 +15,9 @@ export class UserService {
     private sequelize: Sequelize,
   ) {}
 
-  async login(user: UserDto): Promise<UserDto | null> {
+  async findUser(operName: string) {
     return this.userModel.findOne({
-      where: { operName: user.operName, passwd: user.passwd },
+      where: { operName },
     });
   }
 

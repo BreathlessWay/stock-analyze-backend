@@ -10,7 +10,7 @@ import { AppModule } from './app.module';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 
-import { Statics_Folder_Path } from './constants';
+import { Statics_Folder_Name, Statics_Folder_Path } from './constants';
 
 import type { NestExpressApplication } from '@nestjs/platform-express';
 
@@ -28,7 +28,7 @@ async function bootstrap() {
   );
   app.use(cookieParser(), compression(), helmet());
   app.useStaticAssets(Statics_Folder_Path, {
-    prefix: '/statics/', //设置虚拟前缀路径
+    prefix: `/${Statics_Folder_Name}/`, //设置虚拟前缀路径
   });
   app.enableCors();
 

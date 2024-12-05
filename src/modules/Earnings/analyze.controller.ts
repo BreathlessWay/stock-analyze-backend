@@ -12,15 +12,22 @@ import {
   Headers,
   UnauthorizedException,
   Get,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import * as ExcelJS from 'exceljs';
+import * as Joi from 'joi';
+import { fromPairs } from 'lodash';
 
 import { AuthGuard } from '../../guards/auth.guard';
 import { UserService } from '../Users/user.service';
 
 import { aesDecrypt, storageFile } from '../../utils';
 
+import { AnalyzerQueryDto } from './analyze.dto';
+
 import {
+  Project_Folder_Path,
   Statics_Folder_Name,
   Statics_Folder_Path,
   Template_File_Path,
@@ -84,5 +91,59 @@ export class AnalyzeController {
       return true;
     }
     throw '文件上传失败';
+  }
+
+  @Get('analyze_stock')
+  async analyzeStock(
+    @Headers('token') token: string,
+    @Query() query: AnalyzerQueryDto,
+  ) {
+    const operName = this.getOperName(token);
+    const { stock_code } = query;
+    if (!stock_code) {
+      const res = await this.userService.findUser(operName);
+      if (!res?.uploadFilePath) {
+        throw '请添加需要分析的股票代码';
+      }
+      const fileFullPath = join(Project_Folder_Path, res.uploadFilePath);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(fileFullPath);
+      const worksheet = workbook.getWorksheet(1); // 获取第一个工作表
+      const rows = [];
+      const rowDataSchema = Joi.array().items(
+        Joi.string().length(6).required(),
+        Joi.number().required(),
+      );
+      const errorRowIndexs: number[] = [];
+      let msg = '';
+      worksheet.eachRow((row, index) => {
+        if (index === 1) return;
+        const rowData = [];
+        row.eachCell((cell) => {
+          rowData.push(cell.value);
+        });
+        const { error } = rowDataSchema.validate(rowData);
+        if (error) {
+          errorRowIndexs.push(index);
+        } else {
+          rows.push(rowData);
+        }
+      });
+      if (errorRowIndexs.length) {
+        msg = `第${errorRowIndexs.join(',')}行存在不合规数据，已忽略`;
+      }
+      if (!rows.length) {
+        throw msg || '上传文件中未能检索到股票代码';
+      }
+      // 去重
+      const rowMap: Record<string, number> = fromPairs(rows);
+      const stockCodeList = Object.keys(rowMap);
+      const stockWeightList = Object.values(rowMap);
+      return {
+        stockCodeList,
+        stockWeightList,
+        msg,
+      };
+    }
   }
 }

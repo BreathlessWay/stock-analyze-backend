@@ -4,7 +4,7 @@ import { UserService } from './user.service';
 
 import { aesEncrypt } from '../../utils';
 
-import type { UserDto } from './user.dto';
+import { UserDto } from './user.dto';
 
 @Controller('user')
 export class UserController {
@@ -12,18 +12,21 @@ export class UserController {
 
   // 9d25b4226ef057e5a1a05bcadf5c7ada
 
-  @Post()
+  @Post('login')
   async login(@Body() userDto: UserDto) {
-    const res = await this.userService.login(userDto);
-    if (res) {
-      return {
-        token: aesEncrypt(res.operName),
-      };
+    const res = await this.userService.findUser(userDto.operName);
+    if (!res) {
+      throw '用户尚未注册';
     }
-    throw '用户尚未注册';
+    if (res.passwd !== userDto.passwd) {
+      throw '用户密码错误';
+    }
+    return {
+      token: aesEncrypt(res.operName),
+    };
   }
 
-  @Post()
+  @Post('register')
   async register(@Body() userDto: UserDto) {
     const res = await this.userService.register(userDto);
     if (res) {

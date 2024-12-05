@@ -23,14 +23,19 @@ export class TransformInterceptor<T>
     return next.handle().pipe(
       catchError((err) =>
         throwError(() => {
-          if (err?.response?.statusCode === HttpStatus.UNAUTHORIZED) {
+          if (err?.response?.statusCode) {
             return err;
           }
           return new BadRequestException(err);
         }),
       ),
       map((data) => {
-        return { data, code: 0, msg: 'ok' };
+        const result = { data, code: 0, msg: 'ok' };
+        if (data?.msg) {
+          result.msg = data?.msg;
+          delete data.msg;
+        }
+        return result;
       }),
     );
   }
