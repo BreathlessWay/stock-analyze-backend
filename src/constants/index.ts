@@ -11,6 +11,6 @@ export const Statics_Folder_Path = resolve(
 
 export const Template_Folder_Path = resolve(Statics_Folder_Path, 'template');
 
-export const Template_File_Path = resolve(Template_Folder_Path, 'stock.xlsx');
+export const Template_File_Path = resolve(Template_Folder_Path, 'template.zip');
 
 export const Upload_Folder_Path = resolve(Statics_Folder_Path, 'upload');

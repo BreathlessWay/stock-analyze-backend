@@ -38,6 +38,9 @@ dependencies:
   csrf-csrf:
     specifier: ^3.1.0
     version: 3.1.0
+  csv-parse:
+    specifier: ^5.6.0
+    version: 5.6.0
   exceljs:
     specifier: ^4.4.0
     version: 4.4.0
@@ -2487,6 +2490,10 @@ packages:
     resolution: {integrity: sha512-kZacFfFbdYFxNnFdigRHCzVAq019vJyUUtgPLjCtzh6jMXcWmf8bGUx/hsqtSEMXaNcPm8iXpjC+hW5aeOsRMg==}
     dependencies:
       http-errors: 2.0.0
+    dev: false
+
+  /csv-parse@5.6.0:
+    resolution: {integrity: sha512-l3nz3euub2QMg5ouu5U09Ew9Wf6/wQ8I++ch1loQ0ljmzhmfZYrH9fflS22i/PQEvsPvxCwxgz5q7UB8K1JO4Q==}
     dev: false
 
   /dayjs@1.11.13:

@@ -27,7 +27,7 @@ export class TransformInterceptor<T>
             return err;
           }
           if (err.name) {
-            return new BadRequestException(err.name, err);
+            return new BadRequestException(err.name);
           }
           return new BadRequestException(err);
         }),
