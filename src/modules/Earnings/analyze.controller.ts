@@ -49,14 +49,15 @@ export class AnalyzeController {
   @Get('template_file')
   async templateFile() {
     return {
-      template_file: Template_File_Path,
+      template_file: relative(Project_Folder_Path, Template_File_Path),
     };
   }
 
   @Delete('analyze_file')
   async removeFile(@Headers('token') token: string) {
+    const operName = this.getOperName(token);
     const res = await this.userService.updateFilePath({
-      operName: this.getOperName(token),
+      operName,
       uploadFilePath: '',
     });
     if (res) {
@@ -80,15 +81,18 @@ export class AnalyzeController {
     if (!/xlsx?$/g.test(file.originalname)) {
       throw '上传的不是 Excel 文件';
     }
+    const uploadFilePath = join(
+      Statics_Folder_Name,
+      relative(Statics_Folder_Path, file.path),
+    );
     const res = await this.userService.updateFilePath({
       operName,
-      uploadFilePath: join(
-        Statics_Folder_Name,
-        relative(Statics_Folder_Path, file.path),
-      ),
+      uploadFilePath,
     });
     if (res) {
-      return true;
+      return {
+        uploadFilePath,
+      };
     }
     throw '文件上传失败';
   }

@@ -1,4 +1,4 @@
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 export const Statics_Folder_Name = 'statics';
 
@@ -11,6 +11,6 @@ export const Statics_Folder_Path = resolve(
 
 export const Template_Folder_Path = resolve(Statics_Folder_Path, 'template');
 
-export const Template_File_Path = join(Template_Folder_Path, 'stock.xlsx');
+export const Template_File_Path = resolve(Template_Folder_Path, 'stock.xlsx');
 
 export const Upload_Folder_Path = resolve(Statics_Folder_Path, 'upload');
