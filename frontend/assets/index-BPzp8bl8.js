@@ -1,1 +1,0 @@
-import{d as s,e as n,c as u,aj as c,i as p,ak as i}from"./index-BWLoIWRc.js";const l=s({name:"Redirect",setup(){const t=n(),a=u();return c(()=>{const{params:o,query:r}=t,{path:e}=o;a.replace({path:"/"+(Array.isArray(e)?e.join("/"):e),query:r})}),()=>p(i,null,null)}});export{l as default};
