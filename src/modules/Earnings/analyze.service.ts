@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 // The Sequelize class is imported from the sequelize-typescript package.
 import { Op } from 'sequelize';
+import BigNumber from 'bignumber.js';
 
 import { StockProfitModel, StockPriceModel } from './analyze.model';
 
@@ -69,13 +70,72 @@ export class AnalyzeService {
         this.findStockPrice(query),
         this.findStockProfit(query),
       ]);
-      console.log(stockPriceList, stockProfitList, stockCountList);
       if (!stockPriceList.length || !stockProfitList.length) {
         throw '未查询到符合条件的股票';
       }
+      const marketValueMap: Record<string, BigNumber> = {};
+      const stockMarketValueList = stockPriceList.map((item) => {
+        const { tradeDate, stockCode, price } = item;
+        const marketValue = new BigNumber(
+          stockCountList[stockCode],
+        ).multipliedBy(new BigNumber(price));
+        if (marketValueMap[tradeDate]) {
+          marketValueMap[tradeDate] =
+            marketValueMap[tradeDate].plus(marketValue);
+        } else {
+          marketValueMap[tradeDate] = marketValue;
+        }
+        const { profitRatio } = stockProfitList.find(
+          (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
+        );
+        return {
+          tradeDate,
+          stockCode,
+          marketValue,
+          profitRatio,
+        };
+      });
+      const dateMapYieldRate = new Map<
+        string,
+        {
+          stocks: string[];
+          yieldRate: BigNumber;
+        }
+      >();
+      stockMarketValueList.forEach((item) => {
+        const { tradeDate, marketValue, profitRatio, stockCode } = item;
+        const currentDayAllMarketValue = marketValueMap[item.tradeDate];
+        const yieldRate = marketValue
+          .div(currentDayAllMarketValue)
+          .multipliedBy(new BigNumber(profitRatio));
+        if (dateMapYieldRate.has(tradeDate)) {
+          const { stocks, yieldRate: _y } = dateMapYieldRate.get(tradeDate);
+          const v = new BigNumber(_y).plus(yieldRate);
+          stocks.push(stockCode);
+          dateMapYieldRate.set(tradeDate, {
+            stocks,
+            yieldRate: v,
+          });
+        } else {
+          dateMapYieldRate.set(tradeDate, {
+            stocks: [stockCode],
+            yieldRate: yieldRate,
+          });
+        }
+      });
+
+      const x: string[] = [],
+        y: number[] = [];
+      let previousYieldRate = new BigNumber(0);
+      dateMapYieldRate.forEach((item, key) => {
+        x.push(key);
+        previousYieldRate = previousYieldRate.plus(item.yieldRate);
+        y.push(previousYieldRate.toNumber());
+      });
+
       return {
-        x: [],
-        y: [],
+        x,
+        y,
       };
     } else {
       const stockProfitList = await this.findStockProfit(query);
