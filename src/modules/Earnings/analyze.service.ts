@@ -27,6 +27,7 @@ export class AnalyzeService {
           [Op.lte]: query.end_date,
         },
       },
+      order: [['tradeDate', 'ASC']],
     });
     return res.map((item) => {
       return {
@@ -48,6 +49,7 @@ export class AnalyzeService {
           [Op.lte]: query.end_date,
         },
       },
+      order: [['tradeDate', 'ASC']],
     });
     return res.map((item) => {
       return {
@@ -62,17 +64,43 @@ export class AnalyzeService {
     query: StockQueryDto,
     stockCountList: Record<string, number> | null,
   ) {
-    const [stockPriceList, stockProfitList] = await Promise.all([
-      this.findStockPrice(query),
-      this.findStockProfit(query),
-    ]);
-    console.log(stockPriceList, stockProfitList, stockCountList);
-    if (!stockPriceList.length || !stockProfitList.length) {
-      throw '未查询到符合条件的股票';
+    if (stockCountList && query.stockCode.length > 1) {
+      const [stockPriceList, stockProfitList] = await Promise.all([
+        this.findStockPrice(query),
+        this.findStockProfit(query),
+      ]);
+      console.log(stockPriceList, stockProfitList, stockCountList);
+      if (!stockPriceList.length || !stockProfitList.length) {
+        throw '未查询到符合条件的股票';
+      }
+      return {
+        x: [],
+        y: [],
+      };
+    } else {
+      const stockProfitList = await this.findStockProfit(query);
+      if (!stockProfitList.length) {
+        throw '未查询到符合条件的股票';
+      }
+      return stockProfitList.reduce(
+        (pre, next) => {
+          const yLen = pre.y.length;
+          pre.x.push(next.tradeDate);
+
+          if (yLen) {
+            const lastY = pre.y[yLen - 1];
+            pre.y.push(lastY + +next.profitRatio);
+          } else {
+            pre.y.push(+next.profitRatio);
+          }
+
+          return pre;
+        },
+        {
+          x: [] as string[],
+          y: [] as number[],
+        },
+      );
     }
-    return {
-      x: [],
-      y: [],
-    };
   }
 }
