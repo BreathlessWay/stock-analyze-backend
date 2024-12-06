@@ -30,13 +30,16 @@ export class AnalyzeService {
       },
       order: [['tradeDate', 'ASC']],
     });
-    return res.map((item) => {
-      return {
-        tradeDate: item.tradeDate,
-        stockCode: item.stockCode,
-        profitRatio: item.profitRatio,
-      };
-    });
+    if (res && res.length) {
+      return res.map((item) => {
+        return {
+          tradeDate: item.tradeDate,
+          stockCode: item.stockCode,
+          profitRatio: item.profitRatio,
+        };
+      });
+    }
+    return [];
   }
 
   async findStockPrice(query: StockQueryDto) {
@@ -52,13 +55,16 @@ export class AnalyzeService {
       },
       order: [['tradeDate', 'ASC']],
     });
-    return res.map((item) => {
-      return {
-        tradeDate: item.tradeDate,
-        stockCode: item.stockCode,
-        price: item.price,
-      };
-    });
+    if (res && res.length) {
+      return res.map((item) => {
+        return {
+          tradeDate: item.tradeDate,
+          stockCode: item.stockCode,
+          price: item.price,
+        };
+      });
+    }
+    return [];
   }
 
   async findStock(
@@ -87,7 +93,7 @@ export class AnalyzeService {
         }
         const { profitRatio } = stockProfitList.find(
           (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
-        );
+        ) || { profitRatio: 0 };
         return {
           tradeDate,
           stockCode,
