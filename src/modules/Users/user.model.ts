@@ -7,7 +7,9 @@ import {
 } from 'sequelize-typescript';
 
 @Table({
-  tableName: 'operatorInfo',
+  tableName: 'operatorinfo',
+  createdAt: false,
+  updatedAt: false,
 })
 export class UserModel extends Model {
   @PrimaryKey
