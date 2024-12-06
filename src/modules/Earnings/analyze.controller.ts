@@ -1,4 +1,4 @@
-import { relative, join } from 'node:path';
+import { relative, join, sep } from 'node:path';
 import * as fs from 'node:fs';
 
 import {
@@ -136,7 +136,9 @@ export class AnalyzeController {
   @Get('template_file')
   async templateFile() {
     return {
-      template_file: relative(Project_Folder_Path, Template_File_Path),
+      template_file: relative(Project_Folder_Path, Template_File_Path)
+        .split(sep)
+        .join('/'),
     };
   }
 
@@ -179,7 +181,7 @@ export class AnalyzeController {
     });
     if (res) {
       return {
-        uploadFilePath,
+        uploadFilePath: uploadFilePath.split(sep).join('/'),
       };
     }
     throw '文件上传失败';

@@ -1,3 +1,4 @@
+import { sep } from 'node:path';
 import {
   Controller,
   Post,
@@ -37,7 +38,7 @@ export class UserController {
     return {
       token: aesEncrypt(res.operName),
       operName: res.operName,
-      uploadFilePath: res.uploadFilePath,
+      uploadFilePath: res.uploadFilePath.split(sep).join('/'),
     };
   }
 
@@ -53,7 +54,7 @@ export class UserController {
     return {
       token: aesEncrypt(res.operName),
       operName: res.operName,
-      uploadFilePath: res.uploadFilePath,
+      uploadFilePath: res.uploadFilePath.split(sep).join('/'),
     };
   }
 
