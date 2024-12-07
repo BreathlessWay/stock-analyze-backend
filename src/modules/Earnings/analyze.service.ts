@@ -155,7 +155,7 @@ export class AnalyzeService {
           tradeDate: key,
           profitRatio: item.yieldRate.toNumber(),
           profitRatioSum: v,
-          stocks: item.stocks.join('，'),
+          // stocks: item.stocks.join('，'),
         };
         exportAnalyzeFileData.push(arr);
         y.push(v);
@@ -177,7 +177,7 @@ export class AnalyzeService {
             tradeDate: next.tradeDate,
             profitRatio: next.profitRatio,
             profitRatioSum: next.profitRatio,
-            stocks: next.stockCode,
+            // stocks: next.stockCode,
           };
           const yLen = pre.y.length;
           pre.x.push(next.tradeDate);
@@ -215,7 +215,7 @@ export class AnalyzeService {
         { header: '收益日', key: 'tradeDate', width: 20 },
         { header: '当日收益', key: 'profitRatio', width: 20 },
         { header: '总收益', key: 'profitRatioSum', width: 20 },
-        { header: '当日查询股票', key: 'stocks', width: 40 },
+        // { header: '当日查询股票', key: 'stocks', width: 40 },
       ];
 
       // 添加数据
