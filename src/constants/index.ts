@@ -2,6 +2,8 @@ import { resolve } from 'node:path';
 
 export const Statics_Folder_Name = 'statics';
 
+export const Analyze_Result_File_End_Name = '_analyze_result.xlsx';
+
 export const Project_Folder_Path = process.cwd();
 
 export const Statics_Folder_Path = resolve(

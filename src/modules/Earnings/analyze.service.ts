@@ -1,10 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { relative, resolve, sep } from 'node:path';
+
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 // The Sequelize class is imported from the sequelize-typescript package.
 import { Op } from 'sequelize';
 import BigNumber from 'bignumber.js';
+import { Cache } from 'cache-manager';
+import * as ExcelJS from 'exceljs';
 
 import { StockProfitModel, StockPriceModel } from './analyze.model';
+
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import {
+  Analyze_Result_File_End_Name,
+  Project_Folder_Path,
+  Upload_Folder_Path,
+} from '../../constants';
 
 import type { StockQueryDto } from './analyze.dto';
 
@@ -15,6 +26,7 @@ export class AnalyzeService {
     private stockProfitModel: typeof StockProfitModel,
     @InjectModel(StockPriceModel)
     private stockPriceModel: typeof StockPriceModel,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async findStockProfit(query: StockQueryDto) {
@@ -70,6 +82,7 @@ export class AnalyzeService {
   async findStock(
     query: StockQueryDto,
     stockCountList: Record<string, number> | null,
+    token: string,
   ) {
     if (stockCountList && query.stockCode.length > 1) {
       const [stockPriceList, stockProfitList] = await Promise.all([
@@ -130,15 +143,24 @@ export class AnalyzeService {
         }
       });
 
+      const exportAnalyzeFileData: Record<string, any>[] = [];
       const x: string[] = [],
         y: number[] = [];
       let previousYieldRate = new BigNumber(0);
       dateMapYieldRate.forEach((item, key) => {
         x.push(key);
         previousYieldRate = previousYieldRate.plus(item.yieldRate);
-        y.push(previousYieldRate.toNumber());
+        const v = previousYieldRate.toNumber();
+        const arr = {
+          tradeDate: key,
+          profitRatio: item.yieldRate.toNumber(),
+          profitRatioSum: v,
+          stocks: item.stocks.join('，'),
+        };
+        exportAnalyzeFileData.push(arr);
+        y.push(v);
       });
-
+      await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
       return {
         x,
         y,
@@ -148,18 +170,27 @@ export class AnalyzeService {
       if (!stockProfitList.length) {
         throw '未查询到符合条件的股票';
       }
-      return stockProfitList.reduce(
+      const exportAnalyzeFileData: Record<string, any>[] = [];
+      const result = stockProfitList.reduce(
         (pre, next) => {
+          const arr = {
+            tradeDate: next.tradeDate,
+            profitRatio: next.profitRatio,
+            profitRatioSum: next.profitRatio,
+            stocks: next.stockCode,
+          };
           const yLen = pre.y.length;
           pre.x.push(next.tradeDate);
 
           if (yLen) {
             const lastY = pre.y[yLen - 1];
-            pre.y.push(lastY + +next.profitRatio);
+            const v = lastY + +next.profitRatio;
+            arr.profitRatioSum = v;
+            pre.y.push(v);
           } else {
             pre.y.push(+next.profitRatio);
           }
-
+          exportAnalyzeFileData.push(arr);
           return pre;
         },
         {
@@ -167,6 +198,42 @@ export class AnalyzeService {
           y: [] as number[],
         },
       );
+      await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
+      return result;
+    }
+  }
+
+  async exportAnalyzeResult(token: string, operName: string) {
+    const result = await this.cacheManager.get<string>(token);
+    if (result) {
+      const parseResult = JSON.parse(result);
+      const workbook = new ExcelJS.Workbook(); // 创建新的工作簿
+      const worksheet = workbook.addWorksheet('Sheet 1'); // 创建新的工作表
+
+      // 设置表头
+      worksheet.columns = [
+        { header: '收益日', key: 'tradeDate', width: 20 },
+        { header: '当日收益', key: 'profitRatio', width: 20 },
+        { header: '总收益', key: 'profitRatioSum', width: 20 },
+        { header: '当日查询股票', key: 'stocks', width: 40 },
+      ];
+
+      // 添加数据
+      worksheet.addRows(parseResult);
+
+      const analyzeResultFilePath = resolve(
+        Upload_Folder_Path,
+        `${operName}${Analyze_Result_File_End_Name}`,
+      );
+
+      // 写入 Excel 文件
+      await workbook.xlsx.writeFile(analyzeResultFilePath);
+
+      return relative(Project_Folder_Path, analyzeResultFilePath)
+        .split(sep)
+        .join('/');
+    } else {
+      throw '分析结果已失效，请重新查询！';
     }
   }
 }

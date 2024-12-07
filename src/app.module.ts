@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { CacheModule } from '@nestjs/cache-manager';
 import * as Joi from 'joi';
 
 import { AppController } from './app.controller';
@@ -50,6 +51,10 @@ import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
       useFactory: () => ({
         dest: Upload_Folder_Path,
       }),
+    }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 60 * 60 * 24,
     }),
     UserModule,
     AnalyzeModule,

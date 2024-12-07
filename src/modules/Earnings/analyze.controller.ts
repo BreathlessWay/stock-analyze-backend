@@ -102,6 +102,9 @@ export class AnalyzeController {
     const errorRowIndexs: number[] = [];
     let msg = '';
     return new Promise((resolve, reject) => {
+      if (!fs.existsSync(fileFullPath)) {
+        reject('上传的文件已失效，请删除后重新上传！');
+      }
       fs.createReadStream(fileFullPath)
         .pipe(CsvParse({ fromLine: 2 }))
         .on('data', (data) => {
@@ -229,11 +232,21 @@ export class AnalyzeController {
         end_date: dayjs(Number(query.end_date)).format('YYYYMMDD'),
       },
       stockCountMap,
+      token,
     );
 
     return {
       msg,
       ...result,
+    };
+  }
+
+  @Get('analyze_file')
+  async getAnalyzeFile(@Headers('token') token: string) {
+    const operName = this.getOperName(token);
+    const res = await this.analyzeService.exportAnalyzeResult(token, operName);
+    return {
+      analyze_file: res,
     };
   }
 }
