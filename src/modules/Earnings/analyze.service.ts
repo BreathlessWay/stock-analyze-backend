@@ -81,22 +81,29 @@ export class AnalyzeService {
 
   async findStock(
     query: StockQueryDto,
-    stockCountList: Record<string, number> | null,
+    stockCountMap: Record<string, number> | null,
     token: string,
   ) {
-    if (stockCountList && query.stockCode.length > 1) {
-      const [stockPriceList, stockProfitList] = await Promise.all([
-        this.findStockPrice(query),
-        this.findStockProfit(query),
-      ]);
+    const [stockPriceList, stockProfitList] = await Promise.all([
+      this.findStockPrice(query),
+      this.findStockProfit(query),
+    ]);
+    if (stockCountMap && query.stockCode.length > 1) {
       if (!stockPriceList.length || !stockProfitList.length) {
         throw '未查询到符合条件的股票';
       }
-      const marketValueMap: Record<string, BigNumber> = {};
+      const marketValueMap: Record<string, BigNumber> = {},
+        originalList: {
+          stockCode: string;
+          tradeDate: string;
+          profitRatio: number;
+          price: number;
+          stockCount: number;
+        }[] = [];
       const stockMarketValueList = stockPriceList.map((item) => {
         const { tradeDate, stockCode, price } = item;
         const marketValue = new BigNumber(
-          stockCountList[stockCode],
+          stockCountMap[stockCode],
         ).multipliedBy(new BigNumber(price));
         if (marketValueMap[tradeDate]) {
           marketValueMap[tradeDate] =
@@ -107,6 +114,11 @@ export class AnalyzeService {
         const { profitRatio } = stockProfitList.find(
           (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
         ) || { profitRatio: 0 };
+        originalList.push({
+          ...item,
+          profitRatio,
+          stockCount: stockCountMap[stockCode],
+        });
         return {
           tradeDate,
           stockCode,
@@ -155,7 +167,6 @@ export class AnalyzeService {
           tradeDate: key,
           profitRatio: item.yieldRate.toNumber(),
           profitRatioSum: v,
-          // stocks: item.stocks.join('，'),
         };
         exportAnalyzeFileData.push(arr);
         y.push(v);
@@ -164,21 +175,29 @@ export class AnalyzeService {
       return {
         x,
         y,
+        originalList,
       };
     } else {
-      const stockProfitList = await this.findStockProfit(query);
       if (!stockProfitList.length) {
         throw '未查询到符合条件的股票';
       }
       const exportAnalyzeFileData: Record<string, any>[] = [];
       const result = stockProfitList.reduce(
         (pre, next) => {
+          const { price } = stockPriceList.find(
+            (_) =>
+              _.tradeDate === next.tradeDate && _.stockCode === next.stockCode,
+          ) || { price: 0 };
           const arr = {
             tradeDate: next.tradeDate,
             profitRatio: next.profitRatio,
             profitRatioSum: next.profitRatio,
-            // stocks: next.stockCode,
           };
+          pre.originalList.push({
+            ...next,
+            price,
+            stockCount: 1,
+          });
           const yLen = pre.y.length;
           pre.x.push(next.tradeDate);
 
@@ -196,6 +215,13 @@ export class AnalyzeService {
         {
           x: [] as string[],
           y: [] as number[],
+          originalList: [] as {
+            stockCode: string;
+            tradeDate: string;
+            profitRatio: number;
+            price: number;
+            stockCount: number;
+          }[],
         },
       );
       await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
