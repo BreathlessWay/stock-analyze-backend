@@ -88,145 +88,183 @@ export class AnalyzeService {
       this.findStockPrice(query),
       this.findStockProfit(query),
     ]);
-    if (stockCountMap && query.stockCode.length > 1) {
-      if (!stockPriceList.length || !stockProfitList.length) {
-        throw '未查询到符合条件的股票';
-      }
-      const marketValueMap: Record<string, BigNumber> = {},
-        originalList: {
-          stockCode: string;
-          tradeDate: string;
-          profitRatio: number;
-          price: number;
-          stockCount: number;
-        }[] = [];
-      const stockMarketValueList = stockPriceList.map((item) => {
-        const { tradeDate, stockCode, price } = item;
-        const marketValue = new BigNumber(
-          stockCountMap[stockCode],
-        ).multipliedBy(new BigNumber(price));
-        if (marketValueMap[tradeDate]) {
-          marketValueMap[tradeDate] =
-            marketValueMap[tradeDate].plus(marketValue);
-        } else {
-          marketValueMap[tradeDate] = marketValue;
-        }
-        const { profitRatio } = stockProfitList.find(
-          (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
-        ) || { profitRatio: 0 };
-        originalList.push({
-          ...item,
-          profitRatio,
-          stockCount: stockCountMap[stockCode],
-        });
-        return {
-          tradeDate,
-          stockCode,
-          marketValue,
-          profitRatio,
-        };
-      });
-      const dateMapYieldRate = new Map<
-        string,
-        {
-          stocks: string[];
-          yieldRate: BigNumber;
-        }
-      >();
-      stockMarketValueList.forEach((item) => {
-        const { tradeDate, marketValue, profitRatio, stockCode } = item;
-        const currentDayAllMarketValue = marketValueMap[item.tradeDate];
-        const yieldRate = marketValue
-          .div(currentDayAllMarketValue)
-          .multipliedBy(new BigNumber(profitRatio));
-        if (dateMapYieldRate.has(tradeDate)) {
-          const { stocks, yieldRate: _y } = dateMapYieldRate.get(tradeDate);
-          const v = new BigNumber(_y).plus(yieldRate);
-          stocks.push(stockCode);
-          dateMapYieldRate.set(tradeDate, {
-            stocks,
-            yieldRate: v,
-          });
-        } else {
-          dateMapYieldRate.set(tradeDate, {
-            stocks: [stockCode],
-            yieldRate: yieldRate,
-          });
-        }
-      });
-
-      const exportAnalyzeFileData: Record<string, any>[] = [];
-      const x: string[] = [],
-        y: number[] = [];
-      let previousYieldRate = new BigNumber(0);
-      dateMapYieldRate.forEach((item, key) => {
-        x.push(key);
-        previousYieldRate = previousYieldRate.plus(item.yieldRate);
-        const v = previousYieldRate.toNumber();
-        const arr = {
-          tradeDate: key,
-          profitRatio: item.yieldRate.toNumber(),
-          profitRatioSum: v,
-        };
-        exportAnalyzeFileData.push(arr);
-        y.push(v);
-      });
-      await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
-      return {
-        x,
-        y,
-        originalList,
-      };
-    } else {
-      if (!stockProfitList.length) {
-        throw '未查询到符合条件的股票';
-      }
-      const exportAnalyzeFileData: Record<string, any>[] = [];
-      const result = stockProfitList.reduce(
-        (pre, next) => {
-          const { price } = stockPriceList.find(
-            (_) =>
-              _.tradeDate === next.tradeDate && _.stockCode === next.stockCode,
-          ) || { price: 0 };
-          const arr = {
-            tradeDate: next.tradeDate,
-            profitRatio: next.profitRatio,
-            profitRatioSum: next.profitRatio,
-          };
-          pre.originalList.push({
-            ...next,
-            price,
-            stockCount: 1,
-          });
-          const yLen = pre.y.length;
-          pre.x.push(next.tradeDate);
-
-          if (yLen) {
-            const lastY = pre.y[yLen - 1];
-            const v = lastY + +next.profitRatio;
-            arr.profitRatioSum = v;
-            pre.y.push(v);
-          } else {
-            pre.y.push(+next.profitRatio);
-          }
-          exportAnalyzeFileData.push(arr);
-          return pre;
-        },
-        {
-          x: [] as string[],
-          y: [] as number[],
-          originalList: [] as {
-            stockCode: string;
-            tradeDate: string;
-            profitRatio: number;
-            price: number;
-            stockCount: number;
-          }[],
-        },
-      );
-      await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
-      return result;
+    // if (stockCountMap && query.stockCode.length > 1) {
+    if (!stockPriceList.length || !stockProfitList.length) {
+      throw '未查询到符合条件的股票';
     }
+    const marketValueMap: Record<string, BigNumber> = {},
+      firstDayPriceMap = new Map<string, BigNumber>();
+
+    const stockMarketValueList = stockPriceList.map((item) => {
+      const { tradeDate, stockCode, price } = item,
+        stockCount = stockCountMap?.[stockCode] || 1,
+        marketValue = new BigNumber(stockCount).multipliedBy(
+          new BigNumber(price),
+        );
+      if (marketValueMap[tradeDate]) {
+        marketValueMap[tradeDate] = marketValueMap[tradeDate].plus(marketValue);
+      } else {
+        marketValueMap[tradeDate] = marketValue;
+      }
+      const { profitRatio } = stockProfitList.find(
+        (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
+      ) || { profitRatio: 0 };
+
+      let firstDayPrice: BigNumber;
+      if (!firstDayPriceMap.has(stockCode)) {
+        firstDayPrice = new BigNumber(price);
+        firstDayPriceMap.set(stockCode, firstDayPrice);
+      } else {
+        firstDayPrice = firstDayPriceMap.get(stockCode);
+      }
+
+      const baseProfitRatio = new BigNumber(price).div(firstDayPrice).minus(1);
+
+      return {
+        stockCount,
+        price,
+        tradeDate,
+        stockCode,
+        marketValue,
+        profitRatio,
+        baseProfitRatio,
+      };
+    });
+
+    const dayMapYieldRate = new Map<
+      string,
+      {
+        yieldRateProfitRatioSum: BigNumber;
+        yieldRateBaseProfitRatioSum: BigNumber;
+      }
+    >();
+    const stockYieldRateList = stockMarketValueList.map((item) => {
+      const { tradeDate, marketValue, profitRatio, baseProfitRatio } = item;
+      const currentDayAllMarketValue = marketValueMap[tradeDate];
+      const yieldRate = marketValue.div(currentDayAllMarketValue),
+        yieldRateProfitRatio = yieldRate.multipliedBy(
+          new BigNumber(profitRatio),
+        ),
+        yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio);
+
+      if (dayMapYieldRate.has(tradeDate)) {
+        const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } =
+          dayMapYieldRate.get(tradeDate);
+        dayMapYieldRate.set(tradeDate, {
+          yieldRateProfitRatioSum:
+            yieldRateProfitRatioSum.plus(yieldRateProfitRatio),
+          yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatioSum.plus(
+            yieldRateBaseProfitRatio,
+          ),
+        });
+      } else {
+        dayMapYieldRate.set(tradeDate, {
+          yieldRateProfitRatioSum: yieldRateProfitRatio,
+          yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatio,
+        });
+      }
+      return {
+        ...item,
+        yieldRate,
+        yieldRateProfitRatio,
+        yieldRateBaseProfitRatio,
+      };
+    });
+
+    const exportAnalyzeFileData: Record<string, any>[] = [];
+    const tradeDateList: string[] = [],
+      profitRatioSumList: number[] = [],
+      baseProfitRatioSumList: number[] = [],
+      finalProfitRatioSumList: number[] = [];
+    let previousYieldRateProfitRatio = new BigNumber(0),
+      previousYieldRateBaseProfitRatio = new BigNumber(0);
+    dayMapYieldRate.forEach((item, key) => {
+      tradeDateList.push(key);
+      const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } = item;
+      previousYieldRateProfitRatio = previousYieldRateProfitRatio.plus(
+        yieldRateProfitRatioSum,
+      );
+      previousYieldRateBaseProfitRatio = previousYieldRateBaseProfitRatio.plus(
+        yieldRateBaseProfitRatioSum,
+      );
+
+      const profitRatioSum = previousYieldRateProfitRatio.toNumber(),
+        baseProfitRatioSum = previousYieldRateBaseProfitRatio.toNumber(),
+        finalProfitRatioSum = previousYieldRateProfitRatio
+          .plus(previousYieldRateBaseProfitRatio)
+          .toNumber();
+
+      const dayProfitRatioJson = {
+        tradeDate: key,
+        profitRatio: yieldRateProfitRatioSum.toNumber(),
+        baseProfitRatio: yieldRateBaseProfitRatioSum.toNumber(),
+        profitRatioSum,
+        baseProfitRatioSum,
+        finalProfitRatioSum,
+      };
+      exportAnalyzeFileData.push(dayProfitRatioJson);
+      profitRatioSumList.push(profitRatioSum);
+      baseProfitRatioSumList.push(baseProfitRatioSum);
+      finalProfitRatioSumList.push(finalProfitRatioSum);
+    });
+    await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
+    return {
+      tradeDateList,
+      profitRatioSumList,
+      baseProfitRatioSumList,
+      finalProfitRatioSumList,
+      originalList: stockYieldRateList,
+    };
+    // } else {
+    //   if (!stockProfitList.length) {
+    //     throw '未查询到符合条件的股票';
+    //   }
+    //   const exportAnalyzeFileData: Record<string, any>[] = [];
+    //   const result = stockProfitList.reduce(
+    //     (pre, next) => {
+    //       const { price } = stockPriceList.find(
+    //         (_) =>
+    //           _.tradeDate === next.tradeDate && _.stockCode === next.stockCode,
+    //       ) || { price: 0 };
+    //       const arr = {
+    //         tradeDate: next.tradeDate,
+    //         profitRatio: next.profitRatio,
+    //         profitRatioSum: next.profitRatio,
+    //       };
+    //       pre.originalList.push({
+    //         ...next,
+    //         price,
+    //         stockCount: 1,
+    //       });
+    //       const yLen = pre.y.length;
+    //       pre.x.push(next.tradeDate);
+    //
+    //       if (yLen) {
+    //         const lastY = pre.y[yLen - 1];
+    //         const v = lastY + +next.profitRatio;
+    //         arr.profitRatioSum = v;
+    //         pre.y.push(v);
+    //       } else {
+    //         pre.y.push(+next.profitRatio);
+    //       }
+    //       exportAnalyzeFileData.push(arr);
+    //       return pre;
+    //     },
+    //     {
+    //       x: [] as string[],
+    //       y: [] as number[],
+    //       originalList: [] as {
+    //         stockCode: string;
+    //         tradeDate: string;
+    //         profitRatio: number;
+    //         price: number;
+    //         stockCount: number;
+    //       }[],
+    //     },
+    //   );
+    //   await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
+    //   return result;
+    // }
   }
 
   async exportAnalyzeResult(token: string, operName: string) {
@@ -239,8 +277,11 @@ export class AnalyzeService {
       // 设置表头
       worksheet.columns = [
         { header: '收益日', key: 'tradeDate', width: 20 },
-        { header: '当日收益', key: 'profitRatio', width: 20 },
-        { header: '总收益', key: 'profitRatioSum', width: 20 },
+        { header: '当日收益率', key: 'profitRatio', width: 20 },
+        { header: '当日基础收益率', key: 'baseProfitRatio', width: 20 },
+        { header: '累计收益率', key: 'profitRatioSum', width: 20 },
+        { header: '累计基础收益率', key: 'baseProfitRatioSum', width: 20 },
+        { header: '累计最总收益率', key: 'finalProfitRatioSum', width: 20 },
         // { header: '当日查询股票', key: 'stocks', width: 40 },
       ];
 
