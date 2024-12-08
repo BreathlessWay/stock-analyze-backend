@@ -88,6 +88,61 @@ export class AnalyzeService {
       this.findStockPrice(query),
       this.findStockProfit(query),
     ]);
+
+    // const stockPriceList = [
+    //     {
+    //       tradeDate: '20241202',
+    //       stockCode: '111111',
+    //       price: 100,
+    //     },
+    //     {
+    //       tradeDate: '20241203',
+    //       stockCode: '111111',
+    //       price: 101,
+    //     },
+    //     {
+    //       tradeDate: '20241204',
+    //       stockCode: '111111',
+    //       price: 99,
+    //     },
+    //     {
+    //       tradeDate: '20241205',
+    //       stockCode: '111111',
+    //       price: 100,
+    //     },
+    //     {
+    //       tradeDate: '20241206',
+    //       stockCode: '111111',
+    //       price: 102,
+    //     },
+    //   ],
+    //   stockProfitList = [
+    //     {
+    //       tradeDate: '20241202',
+    //       stockCode: '111111',
+    //       profitRatio: 0.001,
+    //     },
+    //     {
+    //       tradeDate: '20241203',
+    //       stockCode: '111111',
+    //       profitRatio: 0.002,
+    //     },
+    //     {
+    //       tradeDate: '20241204',
+    //       stockCode: '111111',
+    //       profitRatio: -0.001,
+    //     },
+    //     {
+    //       tradeDate: '20241205',
+    //       stockCode: '111111',
+    //       profitRatio: 0.0015,
+    //     },
+    //     {
+    //       tradeDate: '20241206',
+    //       stockCode: '111111',
+    //       profitRatio: 0.001,
+    //     },
+    //   ];
     // if (stockCountMap && query.stockCode.length > 1) {
     if (!stockPriceList.length || !stockProfitList.length) {
       throw '未查询到符合条件的股票';
@@ -177,21 +232,22 @@ export class AnalyzeService {
       baseProfitRatioSumList: number[] = [],
       finalProfitRatioSumList: number[] = [];
     let previousYieldRateProfitRatio = new BigNumber(0),
-      previousYieldRateBaseProfitRatio = new BigNumber(0);
+      firstDayProfitRatio: any;
     dayMapYieldRate.forEach((item, key) => {
       tradeDateList.push(key);
       const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } = item;
       previousYieldRateProfitRatio = previousYieldRateProfitRatio.plus(
         yieldRateProfitRatioSum,
       );
-      previousYieldRateBaseProfitRatio = previousYieldRateBaseProfitRatio.plus(
-        yieldRateBaseProfitRatioSum,
-      );
+      if (typeof firstDayProfitRatio === 'undefined') {
+        firstDayProfitRatio = yieldRateProfitRatioSum;
+      }
 
       const profitRatioSum = previousYieldRateProfitRatio.toNumber(),
-        baseProfitRatioSum = previousYieldRateBaseProfitRatio.toNumber(),
+        baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber(),
         finalProfitRatioSum = previousYieldRateProfitRatio
-          .plus(previousYieldRateBaseProfitRatio)
+          .minus(firstDayProfitRatio)
+          .plus(yieldRateBaseProfitRatioSum)
           .toNumber();
 
       const dayProfitRatioJson = {
@@ -199,7 +255,6 @@ export class AnalyzeService {
         profitRatio: yieldRateProfitRatioSum.toNumber(),
         baseProfitRatio: yieldRateBaseProfitRatioSum.toNumber(),
         profitRatioSum,
-        baseProfitRatioSum,
         finalProfitRatioSum,
       };
       exportAnalyzeFileData.push(dayProfitRatioJson);
@@ -207,13 +262,16 @@ export class AnalyzeService {
       baseProfitRatioSumList.push(baseProfitRatioSum);
       finalProfitRatioSumList.push(finalProfitRatioSum);
     });
-    await this.cacheManager.set(token, JSON.stringify(exportAnalyzeFileData));
+    await this.cacheManager.set(
+      token,
+      JSON.stringify(exportAnalyzeFileData.slice(1)),
+    );
     return {
-      tradeDateList,
-      profitRatioSumList,
-      baseProfitRatioSumList,
-      finalProfitRatioSumList,
-      originalList: stockYieldRateList,
+      tradeDateList: tradeDateList.slice(1),
+      profitRatioSumList: profitRatioSumList.slice(1),
+      baseProfitRatioSumList: baseProfitRatioSumList.slice(1),
+      finalProfitRatioSumList: finalProfitRatioSumList.slice(1),
+      originalList: stockYieldRateList.slice(1),
     };
     // } else {
     //   if (!stockProfitList.length) {
@@ -277,11 +335,11 @@ export class AnalyzeService {
       // 设置表头
       worksheet.columns = [
         { header: '收益日', key: 'tradeDate', width: 20 },
-        { header: '当日收益率', key: 'profitRatio', width: 20 },
-        { header: '当日基础收益率', key: 'baseProfitRatio', width: 20 },
-        { header: '累计收益率', key: 'profitRatioSum', width: 20 },
-        { header: '累计基础收益率', key: 'baseProfitRatioSum', width: 20 },
-        { header: '累计最终收益率', key: 'finalProfitRatioSum', width: 20 },
+        { header: '收益率', key: 'profitRatio', width: 20 },
+        { header: '增强收益率', key: 'profitRatioSum', width: 20 },
+        { header: '股票收益率', key: 'baseProfitRatio', width: 20 },
+        { header: '最终收益率', key: 'finalProfitRatioSum', width: 20 },
+        // { header: '股票收益率', key: 'baseProfitRatioSum', width: 20 },
         // { header: '当日查询股票', key: 'stocks', width: 40 },
       ];
 

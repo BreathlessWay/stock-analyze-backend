@@ -228,7 +228,9 @@ export class AnalyzeController {
     const result = await this.analyzeService.findStock(
       {
         stockCode: stockCodeList,
-        start_date: dayjs(Number(query.start_date)).format('YYYYMMDD'),
+        start_date: dayjs(Number(query.start_date))
+          .subtract(1, 'day')
+          .format('YYYYMMDD'),
         end_date: dayjs(Number(query.end_date)).format('YYYYMMDD'),
       },
       stockCountMap,
