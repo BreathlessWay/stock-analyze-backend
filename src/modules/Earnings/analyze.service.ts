@@ -281,7 +281,7 @@ export class AnalyzeService {
         { header: '当日基础收益率', key: 'baseProfitRatio', width: 20 },
         { header: '累计收益率', key: 'profitRatioSum', width: 20 },
         { header: '累计基础收益率', key: 'baseProfitRatioSum', width: 20 },
-        { header: '累计最总收益率', key: 'finalProfitRatioSum', width: 20 },
+        { header: '累计最终收益率', key: 'finalProfitRatioSum', width: 20 },
         // { header: '当日查询股票', key: 'stocks', width: 40 },
       ];
 
