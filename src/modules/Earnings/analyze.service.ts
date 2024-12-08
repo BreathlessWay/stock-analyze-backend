@@ -88,61 +88,6 @@ export class AnalyzeService {
       this.findStockPrice(query),
       this.findStockProfit(query),
     ]);
-
-    // const stockPriceList = [
-    //     {
-    //       tradeDate: '20241202',
-    //       stockCode: '111111',
-    //       price: 100,
-    //     },
-    //     {
-    //       tradeDate: '20241203',
-    //       stockCode: '111111',
-    //       price: 101,
-    //     },
-    //     {
-    //       tradeDate: '20241204',
-    //       stockCode: '111111',
-    //       price: 99,
-    //     },
-    //     {
-    //       tradeDate: '20241205',
-    //       stockCode: '111111',
-    //       price: 100,
-    //     },
-    //     {
-    //       tradeDate: '20241206',
-    //       stockCode: '111111',
-    //       price: 102,
-    //     },
-    //   ],
-    //   stockProfitList = [
-    //     {
-    //       tradeDate: '20241202',
-    //       stockCode: '111111',
-    //       profitRatio: 0.001,
-    //     },
-    //     {
-    //       tradeDate: '20241203',
-    //       stockCode: '111111',
-    //       profitRatio: 0.002,
-    //     },
-    //     {
-    //       tradeDate: '20241204',
-    //       stockCode: '111111',
-    //       profitRatio: -0.001,
-    //     },
-    //     {
-    //       tradeDate: '20241205',
-    //       stockCode: '111111',
-    //       profitRatio: 0.0015,
-    //     },
-    //     {
-    //       tradeDate: '20241206',
-    //       stockCode: '111111',
-    //       profitRatio: 0.001,
-    //     },
-    //   ];
     // if (stockCountMap && query.stockCode.length > 1) {
     if (!stockPriceList.length || !stockProfitList.length) {
       throw '未查询到符合条件的股票';
