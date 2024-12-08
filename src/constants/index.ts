@@ -16,3 +16,11 @@ export const Template_Folder_Path = resolve(Statics_Folder_Path, 'template');
 export const Template_File_Path = resolve(Template_Folder_Path, 'template.zip');
 
 export const Upload_Folder_Path = resolve(Statics_Folder_Path, 'upload');
+
+export const Day_Report_Folder_Path = resolve(
+  Statics_Folder_Path,
+  'day_report',
+);
+
+export const generateDayReportFileName = (date: string) =>
+  `jingxiao_T0_star_${date}.xlsx`;
