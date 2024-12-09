@@ -55,7 +55,7 @@ import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
     }),
     CacheModule.register({
       isGlobal: true,
-      ttl: 60 * 60,
+      ttl: 60 * 60 * 1000,
     }),
     UserModule,
     AnalyzeModule,
