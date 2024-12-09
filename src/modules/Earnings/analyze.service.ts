@@ -273,6 +273,7 @@ export class AnalyzeService {
   async exportAnalyzeResult(token: string, operName: string) {
     const result = await this.cacheManager.get<string>(token);
     if (result) {
+      await this.cacheManager.del(token);
       const parseResult = JSON.parse(result);
       const workbook = new ExcelJS.Workbook(); // 创建新的工作簿
       const worksheet = workbook.addWorksheet('Sheet 1'); // 创建新的工作表
