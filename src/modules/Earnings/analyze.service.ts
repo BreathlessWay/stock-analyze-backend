@@ -17,6 +17,8 @@ import {
   Upload_Folder_Path,
 } from '../../constants';
 
+// import { stockPriceListMock, stockProfitListMock } from './mocks';
+
 import type { StockQueryDto } from './analyze.dto';
 
 @Injectable()
@@ -88,6 +90,8 @@ export class AnalyzeService {
       this.findStockPrice(query),
       this.findStockProfit(query),
     ]);
+    // const stockPriceList = stockPriceListMock,
+    //   stockProfitList = stockProfitListMock;
     // if (stockCountMap && query.stockCode.length > 1) {
     if (!stockPriceList.length || !stockProfitList.length) {
       throw '未查询到符合条件的股票';
@@ -179,9 +183,9 @@ export class AnalyzeService {
 
     const exportAnalyzeFileData: Record<string, any>[] = [];
     const tradeDateList: string[] = [], // 交易日
-      profitRatioSumList: string[] = [], // 增强收益率
-      baseProfitRatioSumList: string[] = [], // 股票收益率
-      finalProfitRatioSumList: string[] = []; // 最终收益率
+      profitRatioSumList: number[] = [], // 增强收益率
+      baseProfitRatioSumList: number[] = [], // 股票收益率
+      finalProfitRatioSumList: number[] = []; // 最终收益率
     let previousYieldRateProfitRatio = new BigNumber(0), // 前一天增强收益率
       firstDayProfitRatio: BigNumber; // 第一天增强收益率
     dayMapYieldRate.forEach((item, key) => {
@@ -194,17 +198,19 @@ export class AnalyzeService {
         firstDayProfitRatio = yieldRateProfitRatioSum;
       }
 
-      const profitRatioSum = previousYieldRateProfitRatio.toString(),
-        baseProfitRatioSum = yieldRateBaseProfitRatioSum.toString(),
+      const profitRatioSum = previousYieldRateProfitRatio
+          .minus(firstDayProfitRatio)
+          .toNumber(),
+        baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber(),
         finalProfitRatioSum = previousYieldRateProfitRatio
-          // .minus(firstDayProfitRatio)
+          .minus(firstDayProfitRatio)
           .plus(yieldRateBaseProfitRatioSum)
-          .toString();
+          .toNumber();
 
       const dayProfitRatioJson = {
         tradeDate: key,
-        profitRatio: yieldRateProfitRatioSum.toString(),
-        baseProfitRatio: yieldRateBaseProfitRatioSum.toString(),
+        profitRatio: yieldRateProfitRatioSum.toNumber(),
+        baseProfitRatio: yieldRateBaseProfitRatioSum.toNumber(),
         profitRatioSum,
         finalProfitRatioSum,
       };
