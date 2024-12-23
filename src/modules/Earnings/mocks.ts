@@ -1,4 +1,4 @@
-export const stockPriceList = [
+export const stockPriceListMock = [
   {
     tradeDate: '20241202',
     stockCode: '111111',
@@ -50,7 +50,7 @@ export const stockPriceList = [
     price: 33,
   },
 ];
-export const stockProfitList = [
+export const stockProfitListMock = [
   {
     tradeDate: '20241202',
     stockCode: '111111',

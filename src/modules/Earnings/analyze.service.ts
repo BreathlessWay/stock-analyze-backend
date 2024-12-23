@@ -98,18 +98,22 @@ export class AnalyzeService {
     const stockMarketValueList = stockPriceList.map((item) => {
       const { tradeDate, stockCode, price } = item,
         stockCount = stockCountMap?.[stockCode] || 1,
+        // 单股当天市值
         marketValue = new BigNumber(stockCount).multipliedBy(
           new BigNumber(price),
         );
+      // 多股当天总市值
       if (marketValueMap[tradeDate]) {
         marketValueMap[tradeDate] = marketValueMap[tradeDate].plus(marketValue);
       } else {
         marketValueMap[tradeDate] = marketValue;
       }
+      // 单股当天收益率
       const { profitRatio } = stockProfitList.find(
         (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
       ) || { profitRatio: 0 };
 
+      // 查询时间段内，第一天的股票价格
       let firstDayPrice: BigNumber;
       if (!firstDayPriceMap.has(stockCode)) {
         firstDayPrice = new BigNumber(price);
@@ -118,6 +122,7 @@ export class AnalyzeService {
         firstDayPrice = firstDayPriceMap.get(stockCode);
       }
 
+      // 当天价格相对第一天的价格的收益率，即 股票收益率
       const baseProfitRatio = new BigNumber(price).div(firstDayPrice).minus(1);
 
       return {
@@ -141,11 +146,11 @@ export class AnalyzeService {
     const stockYieldRateList = stockMarketValueList.map((item) => {
       const { tradeDate, marketValue, profitRatio, baseProfitRatio } = item;
       const currentDayAllMarketValue = marketValueMap[tradeDate];
-      const yieldRate = marketValue.div(currentDayAllMarketValue),
+      const yieldRate = marketValue.div(currentDayAllMarketValue), // 该股当天的权重，即市值占比
         yieldRateProfitRatio = yieldRate.multipliedBy(
           new BigNumber(profitRatio),
-        ),
-        yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio);
+        ), // 当天收益率 * 权重，即增强收益率
+        yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio); // 当天股票收益率 * 权重
 
       if (dayMapYieldRate.has(tradeDate)) {
         const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } =
@@ -163,6 +168,7 @@ export class AnalyzeService {
           yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatio,
         });
       }
+
       return {
         ...item,
         yieldRate,
@@ -172,12 +178,12 @@ export class AnalyzeService {
     });
 
     const exportAnalyzeFileData: Record<string, any>[] = [];
-    const tradeDateList: string[] = [],
-      profitRatioSumList: number[] = [],
-      baseProfitRatioSumList: number[] = [],
-      finalProfitRatioSumList: number[] = [];
-    let previousYieldRateProfitRatio = new BigNumber(0),
-      firstDayProfitRatio: any;
+    const tradeDateList: string[] = [], // 交易日
+      profitRatioSumList: string[] = [], // 增强收益率
+      baseProfitRatioSumList: string[] = [], // 股票收益率
+      finalProfitRatioSumList: string[] = []; // 最终收益率
+    let previousYieldRateProfitRatio = new BigNumber(0), // 前一天增强收益率
+      firstDayProfitRatio: BigNumber; // 第一天增强收益率
     dayMapYieldRate.forEach((item, key) => {
       tradeDateList.push(key);
       const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } = item;
@@ -188,17 +194,17 @@ export class AnalyzeService {
         firstDayProfitRatio = yieldRateProfitRatioSum;
       }
 
-      const profitRatioSum = previousYieldRateProfitRatio.toNumber(),
-        baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber(),
+      const profitRatioSum = previousYieldRateProfitRatio.toString(),
+        baseProfitRatioSum = yieldRateBaseProfitRatioSum.toString(),
         finalProfitRatioSum = previousYieldRateProfitRatio
-          .minus(firstDayProfitRatio)
+          // .minus(firstDayProfitRatio)
           .plus(yieldRateBaseProfitRatioSum)
-          .toNumber();
+          .toString();
 
       const dayProfitRatioJson = {
         tradeDate: key,
-        profitRatio: yieldRateProfitRatioSum.toNumber(),
-        baseProfitRatio: yieldRateBaseProfitRatioSum.toNumber(),
+        profitRatio: yieldRateProfitRatioSum.toString(),
+        baseProfitRatio: yieldRateBaseProfitRatioSum.toString(),
         profitRatioSum,
         finalProfitRatioSum,
       };
@@ -212,12 +218,19 @@ export class AnalyzeService {
       JSON.stringify(exportAnalyzeFileData.slice(1)),
     );
     return {
-      tradeDateList: tradeDateList.slice(1),
-      profitRatioSumList: profitRatioSumList.slice(1),
-      baseProfitRatioSumList: baseProfitRatioSumList.slice(1),
-      finalProfitRatioSumList: finalProfitRatioSumList.slice(1),
+      tradeDateList: tradeDateList.slice(1), // 交易日
+      profitRatioSumList: profitRatioSumList.slice(1), // 增强收益率
+      baseProfitRatioSumList: baseProfitRatioSumList.slice(1), // 股票收益率
+      finalProfitRatioSumList: finalProfitRatioSumList.slice(1), // 最终收益率
       originalList: stockYieldRateList.slice(1),
     };
+    // return {
+    //   tradeDateList: tradeDateList, // 交易日
+    //   profitRatioSumList: profitRatioSumList, // 增强收益率
+    //   baseProfitRatioSumList: baseProfitRatioSumList, // 股票收益率
+    //   finalProfitRatioSumList: finalProfitRatioSumList, // 最终收益率
+    //   originalList: stockYieldRateList,
+    // };
     // } else {
     //   if (!stockProfitList.length) {
     //     throw '未查询到符合条件的股票';
