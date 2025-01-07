@@ -52,9 +52,9 @@ export class AnalyzeService {
           stockCode: item.stockCode,
           originalProfitRatio: item.profitRatio,
           profitRatio:
-            Number(item.profitRatio) +
+            Number(item.profitRatio || 0) +
             2 *
-              item.changeRate *
+              (item.changeRate || 0) *
               ((DefaultServiceCharge - Number(query.service_charge)) / 1e4),
           changeRate: item.changeRate,
         };
@@ -120,9 +120,10 @@ export class AnalyzeService {
         marketValueMap[tradeDate] = marketValue;
       }
       // 单股当天收益率
-      const { profitRatio } = stockProfitList.find(
-        (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
-      ) || { profitRatio: 0 };
+      const { profitRatio, originalProfitRatio, changeRate } =
+        stockProfitList.find(
+          (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
+        ) || { profitRatio: 0, originalProfitRatio: 0, changeRate: 0 };
 
       // 查询时间段内，第一天的股票价格
       let firstDayPrice: BigNumber;
@@ -143,6 +144,8 @@ export class AnalyzeService {
         stockCode,
         marketValue,
         profitRatio,
+        originalProfitRatio,
+        changeRate,
         baseProfitRatio,
       };
     });
