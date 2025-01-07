@@ -11,6 +11,9 @@ export class AnalyzerQueryDto {
 
   @IsString()
   end_date: string;
+
+  @IsString()
+  service_charge: string;
 }
 
 export type StockQueryDto = {
@@ -19,4 +22,6 @@ export type StockQueryDto = {
   start_date: string;
 
   end_date: string;
+
+  service_charge: string;
 };

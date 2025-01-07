@@ -24,3 +24,5 @@ export const Day_Report_Folder_Path = resolve(
 
 export const generateDayReportFileName = (date: string) =>
   `jingxiao_T0_star_${date}.xlsx`;
+
+export const DefaultServiceCharge = 4;

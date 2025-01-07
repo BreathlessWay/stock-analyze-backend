@@ -232,6 +232,7 @@ export class AnalyzeController {
           .subtract(1, 'day')
           .format('YYYYMMDD'),
         end_date: dayjs(Number(query.end_date)).format('YYYYMMDD'),
+        service_charge: query.service_charge,
       },
       stockCountMap,
       token,

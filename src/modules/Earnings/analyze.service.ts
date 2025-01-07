@@ -13,6 +13,7 @@ import { StockProfitModel, StockPriceModel } from './analyze.model';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   Analyze_Result_File_End_Name,
+  DefaultServiceCharge,
   Project_Folder_Path,
   Upload_Folder_Path,
 } from '../../constants';
@@ -49,7 +50,13 @@ export class AnalyzeService {
         return {
           tradeDate: item.tradeDate,
           stockCode: item.stockCode,
-          profitRatio: item.profitRatio,
+          originalProfitRatio: item.profitRatio,
+          profitRatio:
+            Number(item.profitRatio) +
+            2 *
+              item.changeRate *
+              ((DefaultServiceCharge - Number(query.service_charge)) / 1e4),
+          changeRate: item.changeRate,
         };
       });
     }

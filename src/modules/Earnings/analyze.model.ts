@@ -52,4 +52,9 @@ export class StockProfitModel extends Model {
     type: DataType.NUMBER,
   })
   profitRatio: number;
+
+  @Column({
+    type: DataType.NUMBER,
+  })
+  changeRate: number;
 }
