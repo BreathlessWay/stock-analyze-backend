@@ -56,12 +56,15 @@ export class AnalyzeController {
   async parseExcel(fileFullPath: string) {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(fileFullPath);
-    const worksheet = workbook.getWorksheet(1); // 获取第一个工作表
+    const worksheet = workbook.worksheets[0]; // 获取第一个工作表
     const rows = [];
     const rowDataSchema = Joi.array().items(
       Joi.string().length(6).required(),
       Joi.number().required(),
     );
+    if (!worksheet) {
+      throw 'excel文件格式错误,解析失败!';
+    }
     const errorRowIndexs: number[] = [];
     let msg = '';
     worksheet.eachRow((row, index) => {
