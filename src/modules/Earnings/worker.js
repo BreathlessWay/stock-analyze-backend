@@ -50,26 +50,34 @@ const handle = ({ stockPriceList, stockCountMap, stockProfitList }) => {
 
   const dayMapYieldRate = new Map();
   const stockYieldRateList = stockMarketValueList.map((item) => {
-    const { tradeDate, marketValue, profitRatio, baseProfitRatio } = item;
+    const { tradeDate, marketValue, profitRatio, baseProfitRatio, changeRate } =
+      item;
     const currentDayAllMarketValue = marketValueMap[tradeDate];
     const yieldRate = marketValue.div(currentDayAllMarketValue), // 该股当天的权重，即市值占比
       yieldRateProfitRatio = yieldRate.multipliedBy(new BigNumber(profitRatio)), // 当天收益率 * 权重，即增强收益率
-      yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio); // 当天股票收益率 * 权重
+      yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio), // 当天股票收益率 * 权重
+      yieldRateChangeRate = yieldRate.multipliedBy(changeRate); // 当天股票换手率 * 权重
 
     if (dayMapYieldRate.has(tradeDate)) {
-      const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } =
-        dayMapYieldRate.get(tradeDate);
+      const {
+        yieldRateProfitRatioSum,
+        yieldRateBaseProfitRatioSum,
+        yieldRateChangeRateSum,
+      } = dayMapYieldRate.get(tradeDate);
       dayMapYieldRate.set(tradeDate, {
         yieldRateProfitRatioSum:
           yieldRateProfitRatioSum.plus(yieldRateProfitRatio),
         yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatioSum.plus(
           yieldRateBaseProfitRatio,
         ),
+        yieldRateChangeRateSum:
+          yieldRateChangeRateSum.plus(yieldRateChangeRate),
       });
     } else {
       dayMapYieldRate.set(tradeDate, {
         yieldRateProfitRatioSum: yieldRateProfitRatio,
         yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatio,
+        yieldRateChangeRateSum: yieldRateChangeRate,
       });
     }
 
@@ -85,12 +93,18 @@ const handle = ({ stockPriceList, stockCountMap, stockProfitList }) => {
   const tradeDateList = [], // 交易日
     profitRatioSumList = [], // 增强收益率
     baseProfitRatioSumList = [], // 股票收益率
-    finalProfitRatioSumList = []; // 最终收益率
+    finalProfitRatioSumList = [], // 最终收益率
+    changeRateSumList = []; // 换手率
   let previousYieldRateProfitRatio = new BigNumber(0), // 前一天增强收益率
     firstDayProfitRatio; // 第一天增强收益率
   dayMapYieldRate.forEach((item, key) => {
     tradeDateList.push(key);
-    const { yieldRateProfitRatioSum, yieldRateBaseProfitRatioSum } = item;
+    const {
+      yieldRateProfitRatioSum,
+      yieldRateBaseProfitRatioSum,
+      yieldRateChangeRateSum,
+    } = item;
+
     previousYieldRateProfitRatio = previousYieldRateProfitRatio.plus(
       yieldRateProfitRatioSum,
     );
@@ -105,7 +119,8 @@ const handle = ({ stockPriceList, stockCountMap, stockProfitList }) => {
       finalProfitRatioSum = previousYieldRateProfitRatio
         .minus(firstDayProfitRatio)
         .plus(yieldRateBaseProfitRatioSum)
-        .toNumber();
+        .toNumber(),
+      changeRateSum = yieldRateChangeRateSum.toNumber();
 
     const dayProfitRatioJson = {
       tradeDate: key,
@@ -113,11 +128,14 @@ const handle = ({ stockPriceList, stockCountMap, stockProfitList }) => {
       baseProfitRatio: yieldRateBaseProfitRatioSum.toNumber(),
       profitRatioSum,
       finalProfitRatioSum,
+      changeRateSum,
     };
+
     exportAnalyzeFileData.push(dayProfitRatioJson);
     profitRatioSumList.push(profitRatioSum);
     baseProfitRatioSumList.push(baseProfitRatioSum);
     finalProfitRatioSumList.push(finalProfitRatioSum);
+    changeRateSumList.push(changeRateSum);
   });
 
   return {
@@ -126,6 +144,7 @@ const handle = ({ stockPriceList, stockCountMap, stockProfitList }) => {
     profitRatioSumList: profitRatioSumList.slice(1), // 增强收益率
     baseProfitRatioSumList: baseProfitRatioSumList.slice(1), // 股票收益率
     finalProfitRatioSumList: finalProfitRatioSumList.slice(1), // 最终收益率
+    changeRateSumList: changeRateSumList.slice(1), // 换手率
     originalList: stockYieldRateList.slice(1),
   };
 };

@@ -121,14 +121,15 @@ export class AnalyzeService {
 
     await this.cacheManager.set(
       token,
-      JSON.stringify(result?.exportAnalyzeFileData?.slice(1)),
+      JSON.stringify(result?.exportAnalyzeFileData),
     );
     return {
-      tradeDateList: result?.tradeDateList?.slice(1), // 交易日
-      profitRatioSumList: result?.profitRatioSumList?.slice(1), // 增强收益率
-      baseProfitRatioSumList: result?.baseProfitRatioSumList?.slice(1), // 股票收益率
-      finalProfitRatioSumList: result?.finalProfitRatioSumList?.slice(1), // 最终收益率
-      originalList: result?.stockYieldRateList?.slice(1),
+      tradeDateList: result?.tradeDateList, // 交易日
+      profitRatioSumList: result?.profitRatioSumList, // 增强收益率
+      baseProfitRatioSumList: result?.baseProfitRatioSumList, // 股票收益率
+      finalProfitRatioSumList: result?.finalProfitRatioSumList, // 最终收益率
+      changeRateSumList: result?.changeRateSumList, // 换手率
+      originalList: result?.stockYieldRateList,
     };
   }
 
@@ -147,6 +148,7 @@ export class AnalyzeService {
         { header: '增强收益率', key: 'profitRatioSum', width: 20 },
         { header: '股票收益率', key: 'baseProfitRatio', width: 20 },
         { header: '最终收益率', key: 'finalProfitRatioSum', width: 20 },
+        { header: '换手率', key: 'changeRateSum', width: 20 },
         // { header: '股票收益率', key: 'baseProfitRatioSum', width: 20 },
         // { header: '当日查询股票', key: 'stocks', width: 40 },
       ];
