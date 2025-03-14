@@ -5,24 +5,14 @@ import BigNumber from 'bignumber.js';
 const handle = ({
   stockPriceList,
   stockCountMap,
-  stockProfitList,
+  stockProfitMap,
 }: {
   stockPriceList: {
     tradeDate: string;
     stockCode: string;
     price: number;
   }[];
-  stockProfitList: {
-    tradeDate: string;
-    stockCode: string;
-    originalProfitRatio: number;
-    profitRatio: number;
-    changeRate: number;
-  }[];
-  stockCountMap: Record<string, number> | null;
-}) => {
-  // 将stockProfitList转换为Map，以便快速查找
-  const stockProfitMap = new Map<
+  stockProfitMap: Map<
     string,
     Map<
       string,
@@ -32,26 +22,19 @@ const handle = ({
         changeRate: number;
       }
     >
-  >();
-  stockProfitList.forEach((item) => {
-    if (!stockProfitMap.has(item.stockCode)) {
-      stockProfitMap.set(item.stockCode, new Map());
-    }
-    stockProfitMap.get(item.stockCode).set(item.tradeDate, {
-      profitRatio: item.profitRatio,
-      originalProfitRatio: item.originalProfitRatio,
-      changeRate: item.changeRate,
-    });
-  });
-
+  >;
+  stockCountMap: Record<string, number> | null;
+}) => {
   const marketValueMap: Record<string, BigNumber> = {};
   const firstDayPriceMap = new Map<string, BigNumber>();
 
   const stockMarketValueList = stockPriceList.map((item) => {
     const { tradeDate, stockCode, price } = item;
     const stockCount = stockCountMap?.[stockCode] || 1;
+    // 单股当天市值
     const marketValue = new BigNumber(stockCount).multipliedBy(price);
 
+    // 多股当天总市值
     if (marketValueMap[tradeDate]) {
       marketValueMap[tradeDate] = marketValueMap[tradeDate].plus(marketValue);
     } else {
@@ -83,6 +66,7 @@ const handle = ({
       firstDayPrice = firstDayPriceMap.get(stockCode);
     }
 
+    // 当天价格相对第一天的价格的收益率，即 股票收益率
     const baseProfitRatio = new BigNumber(price).div(firstDayPrice).minus(1);
 
     return {
@@ -107,23 +91,27 @@ const handle = ({
     const { tradeDate, marketValue, profitRatio, baseProfitRatio, changeRate } =
       item;
     const currentDayAllMarketValue = marketValueMap[tradeDate];
-    const yieldRate = marketValue.div(currentDayAllMarketValue);
+    const yieldRate = marketValue.div(currentDayAllMarketValue); // 该股当天的权重，即市值占比
     const yieldRateProfitRatio = yieldRate.multipliedBy(
       new BigNumber(profitRatio),
-    );
-    const yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio);
-    const yieldRateChangeRate = yieldRate.multipliedBy(changeRate);
+    ); // 当天收益率 * 权重，即增强收益率
+    const yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio); // 当天股票收益率 * 权重
+    const yieldRateChangeRate = yieldRate.multipliedBy(changeRate); // 当天股票换手率 * 权重
 
     if (dayMapYieldRate.has(tradeDate)) {
-      const existing = dayMapYieldRate.get(tradeDate);
+      const {
+        yieldRateProfitRatioSum,
+        yieldRateBaseProfitRatioSum,
+        yieldRateChangeRateSum,
+      } = dayMapYieldRate.get(tradeDate);
       dayMapYieldRate.set(tradeDate, {
         yieldRateProfitRatioSum:
-          existing.yieldRateProfitRatioSum.plus(yieldRateProfitRatio),
-        yieldRateBaseProfitRatioSum: existing.yieldRateBaseProfitRatioSum.plus(
+          yieldRateProfitRatioSum.plus(yieldRateProfitRatio),
+        yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatioSum.plus(
           yieldRateBaseProfitRatio,
         ),
         yieldRateChangeRateSum:
-          existing.yieldRateChangeRateSum.plus(yieldRateChangeRate),
+          yieldRateChangeRateSum.plus(yieldRateChangeRate),
       });
     } else {
       dayMapYieldRate.set(tradeDate, {
@@ -135,14 +123,13 @@ const handle = ({
   });
 
   const exportAnalyzeFileData: Record<string, any>[] = [];
-  const tradeDateList: string[] = [];
-  const profitRatioSumList: number[] = [];
-  const baseProfitRatioSumList: number[] = [];
-  const finalProfitRatioSumList: number[] = [];
-  const changeRateSumList: number[] = [];
-
-  let previousYieldRateProfitRatio = new BigNumber(0);
-  let firstDayProfitRatio: BigNumber;
+  const tradeDateList: string[] = [], // 交易日
+    profitRatioSumList: number[] = [], // 增强收益率
+    baseProfitRatioSumList: number[] = [], // 股票收益率
+    finalProfitRatioSumList: number[] = [], // 最终收益率
+    changeRateSumList: number[] = []; // 换手率
+  let previousYieldRateProfitRatio = new BigNumber(0), // 前一天增强收益率
+    firstDayProfitRatio: BigNumber; // 第一天增强收益率
 
   dayMapYieldRate.forEach((item, key) => {
     tradeDateList.push(key);
@@ -160,13 +147,13 @@ const handle = ({
     }
 
     const profitRatioSum = previousYieldRateProfitRatio
-      .minus(firstDayProfitRatio)
-      .toNumber();
-    const baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber();
-    const finalProfitRatioSum = previousYieldRateProfitRatio
-      .minus(firstDayProfitRatio)
-      .plus(yieldRateBaseProfitRatioSum)
-      .toNumber();
+        .minus(firstDayProfitRatio)
+        .toNumber(),
+      baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber(),
+      finalProfitRatioSum = previousYieldRateProfitRatio
+        .minus(firstDayProfitRatio)
+        .plus(yieldRateBaseProfitRatioSum)
+        .toNumber();
     const changeRateSum = yieldRateChangeRateSum.toNumber();
 
     exportAnalyzeFileData.push({

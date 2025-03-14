@@ -52,10 +52,23 @@ export class AnalyzeService {
       order: [['tradeDate', 'ASC']],
     });
     if (res && res.length) {
-      return res.map((item) => {
-        return {
-          tradeDate: item.tradeDate,
-          stockCode: item.stockCode,
+      // 将stockProfitList转换为Map，以便快速查找
+      const stockProfitMap = new Map<
+        string,
+        Map<
+          string,
+          {
+            profitRatio: number;
+            originalProfitRatio: number;
+            changeRate: number;
+          }
+        >
+      >();
+      res.forEach((item) => {
+        if (!stockProfitMap.has(item.stockCode)) {
+          stockProfitMap.set(item.stockCode, new Map());
+        }
+        stockProfitMap.get(item.stockCode).set(item.tradeDate, {
           originalProfitRatio: item.profitRatio,
           profitRatio:
             Number(item.profitRatio || 0) +
@@ -63,10 +76,12 @@ export class AnalyzeService {
               (item.changeRate || 0) *
               ((DefaultServiceCharge - Number(query.service_charge)) / 1e4),
           changeRate: item.changeRate,
-        };
+        });
       });
+
+      return stockProfitMap;
     }
-    return [];
+    return null;
   }
 
   async findStockPrice(query: StockQueryDto) {
@@ -99,14 +114,14 @@ export class AnalyzeService {
     stockCountMap: Record<string, number> | null,
     token: string,
   ) {
-    const [stockPriceList, stockProfitList] = await Promise.all([
+    const [stockPriceList, stockProfitMap] = await Promise.all([
       this.findStockPrice(query),
       this.findStockProfit(query),
     ]);
     // const stockPriceList = stockPriceListMock,
     //   stockProfitList = stockProfitListMock;
     // if (stockCountMap && query.stockCode.length > 1) {
-    if (!stockPriceList.length || !stockProfitList.length) {
+    if (!stockPriceList.length || !stockProfitMap) {
       throw '未查询到符合条件的股票';
     }
 
@@ -114,7 +129,7 @@ export class AnalyzeService {
       const worker = new Worker(workFilePath, {
         workerData: {
           stockPriceList,
-          stockProfitList,
+          stockProfitMap,
           stockCountMap,
         },
       });
