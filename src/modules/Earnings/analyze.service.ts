@@ -1,4 +1,4 @@
-import { relative, resolve, sep } from 'node:path';
+import { relative, resolve, sep, join } from 'node:path';
 import { Worker } from 'worker_threads';
 // import * as os from 'os';
 
@@ -23,6 +23,8 @@ import {
 // import { stockPriceListMock, stockProfitListMock } from './mocks';
 
 import type { StockQueryDto } from './analyze.dto';
+
+const workFilePath = join(__dirname, 'worker.js');
 
 // const workerCount = os.cpus().length;
 // const workers = [];
@@ -109,7 +111,7 @@ export class AnalyzeService {
     }
 
     const result = await new Promise<any>((resolve) => {
-      const worker = new Worker('./src/modules/Earnings/worker.js', {
+      const worker = new Worker(workFilePath, {
         workerData: {
           stockPriceList,
           stockProfitList,
@@ -129,7 +131,7 @@ export class AnalyzeService {
       baseProfitRatioSumList: result?.baseProfitRatioSumList, // 股票收益率
       finalProfitRatioSumList: result?.finalProfitRatioSumList, // 最终收益率
       changeRateSumList: result?.changeRateSumList, // 换手率
-      originalList: result?.stockYieldRateList,
+      // originalList: result?.stockYieldRateList,
     };
   }
 
