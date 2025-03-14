@@ -1,4 +1,5 @@
 import { parentPort, workerData } from 'worker_threads';
+
 import BigNumber from 'bignumber.js';
 
 const handle = ({
@@ -20,28 +21,60 @@ const handle = ({
   }[];
   stockCountMap: Record<string, number> | null;
 }) => {
-  const marketValueMap: Record<string, BigNumber> = {},
-    firstDayPriceMap = new Map<string, BigNumber>();
+  // 将stockProfitList转换为Map，以便快速查找
+  const stockProfitMap = new Map<
+    string,
+    Map<
+      string,
+      {
+        profitRatio: number;
+        originalProfitRatio: number;
+        changeRate: number;
+      }
+    >
+  >();
+  stockProfitList.forEach((item) => {
+    if (!stockProfitMap.has(item.stockCode)) {
+      stockProfitMap.set(item.stockCode, new Map());
+    }
+    stockProfitMap.get(item.stockCode).set(item.tradeDate, {
+      profitRatio: item.profitRatio,
+      originalProfitRatio: item.originalProfitRatio,
+      changeRate: item.changeRate,
+    });
+  });
+
+  const marketValueMap: Record<string, BigNumber> = {};
+  const firstDayPriceMap = new Map<string, BigNumber>();
 
   const stockMarketValueList = stockPriceList.map((item) => {
-    const { tradeDate, stockCode, price } = item,
-      stockCount = stockCountMap?.[stockCode] || 1,
-      // 单股当天市值
-      marketValue = new BigNumber(stockCount).multipliedBy(
-        new BigNumber(price),
-      );
-    // 多股当天总市值
+    const { tradeDate, stockCode, price } = item;
+    const stockCount = stockCountMap?.[stockCode] || 1;
+    const marketValue = new BigNumber(stockCount).multipliedBy(price);
+
     if (marketValueMap[tradeDate]) {
       marketValueMap[tradeDate] = marketValueMap[tradeDate].plus(marketValue);
     } else {
       marketValueMap[tradeDate] = marketValue;
     }
-    // 单股当天收益率
-    const { profitRatio, changeRate } = stockProfitList.find(
-      (_) => _.stockCode === stockCode && _.tradeDate === tradeDate,
-    ) || { profitRatio: 0, originalProfitRatio: 0, changeRate: 0 };
 
-    // 查询时间段内，第一天的股票价格
+    // 获取利润信息
+    let profitInfo: {
+      profitRatio: number;
+      changeRate: number;
+      originalProfitRatio?: number;
+    };
+    if (stockProfitMap.has(stockCode)) {
+      profitInfo = stockProfitMap.get(stockCode).get(tradeDate) || {
+        profitRatio: 0,
+        originalProfitRatio: 0,
+        changeRate: 0,
+      };
+    } else {
+      profitInfo = { profitRatio: 0, originalProfitRatio: 0, changeRate: 0 };
+    }
+
+    // 获取第一天价格
     let firstDayPrice: BigNumber;
     if (!firstDayPriceMap.has(stockCode)) {
       firstDayPrice = new BigNumber(price);
@@ -50,14 +83,13 @@ const handle = ({
       firstDayPrice = firstDayPriceMap.get(stockCode);
     }
 
-    // 当天价格相对第一天的价格的收益率，即 股票收益率
     const baseProfitRatio = new BigNumber(price).div(firstDayPrice).minus(1);
 
     return {
       tradeDate,
       marketValue,
-      profitRatio,
-      changeRate,
+      profitRatio: profitInfo.profitRatio,
+      changeRate: profitInfo.changeRate,
       baseProfitRatio,
     };
   });
@@ -70,29 +102,28 @@ const handle = ({
       yieldRateChangeRateSum: BigNumber;
     }
   >();
-  stockMarketValueList.map((item) => {
+
+  stockMarketValueList.forEach((item) => {
     const { tradeDate, marketValue, profitRatio, baseProfitRatio, changeRate } =
       item;
     const currentDayAllMarketValue = marketValueMap[tradeDate];
-    const yieldRate = marketValue.div(currentDayAllMarketValue), // 该股当天的权重，即市值占比
-      yieldRateProfitRatio = yieldRate.multipliedBy(new BigNumber(profitRatio)), // 当天收益率 * 权重，即增强收益率
-      yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio), // 当天股票收益率 * 权重
-      yieldRateChangeRate = yieldRate.multipliedBy(changeRate); // 当天股票换手率 * 权重
+    const yieldRate = marketValue.div(currentDayAllMarketValue);
+    const yieldRateProfitRatio = yieldRate.multipliedBy(
+      new BigNumber(profitRatio),
+    );
+    const yieldRateBaseProfitRatio = yieldRate.multipliedBy(baseProfitRatio);
+    const yieldRateChangeRate = yieldRate.multipliedBy(changeRate);
 
     if (dayMapYieldRate.has(tradeDate)) {
-      const {
-        yieldRateProfitRatioSum,
-        yieldRateBaseProfitRatioSum,
-        yieldRateChangeRateSum,
-      } = dayMapYieldRate.get(tradeDate);
+      const existing = dayMapYieldRate.get(tradeDate);
       dayMapYieldRate.set(tradeDate, {
         yieldRateProfitRatioSum:
-          yieldRateProfitRatioSum.plus(yieldRateProfitRatio),
-        yieldRateBaseProfitRatioSum: yieldRateBaseProfitRatioSum.plus(
+          existing.yieldRateProfitRatioSum.plus(yieldRateProfitRatio),
+        yieldRateBaseProfitRatioSum: existing.yieldRateBaseProfitRatioSum.plus(
           yieldRateBaseProfitRatio,
         ),
         yieldRateChangeRateSum:
-          yieldRateChangeRateSum.plus(yieldRateChangeRate),
+          existing.yieldRateChangeRateSum.plus(yieldRateChangeRate),
       });
     } else {
       dayMapYieldRate.set(tradeDate, {
@@ -101,22 +132,18 @@ const handle = ({
         yieldRateChangeRateSum: yieldRateChangeRate,
       });
     }
-
-    return {
-      yieldRate,
-      yieldRateProfitRatio,
-      yieldRateBaseProfitRatio,
-    };
   });
 
   const exportAnalyzeFileData: Record<string, any>[] = [];
-  const tradeDateList: string[] = [], // 交易日
-    profitRatioSumList: number[] = [], // 增强收益率
-    baseProfitRatioSumList: number[] = [], // 股票收益率
-    finalProfitRatioSumList: number[] = [], // 最终收益率
-    changeRateSumList: number[] = []; // 换手率
-  let previousYieldRateProfitRatio = new BigNumber(0), // 前一天增强收益率
-    firstDayProfitRatio: BigNumber; // 第一天增强收益率
+  const tradeDateList: string[] = [];
+  const profitRatioSumList: number[] = [];
+  const baseProfitRatioSumList: number[] = [];
+  const finalProfitRatioSumList: number[] = [];
+  const changeRateSumList: number[] = [];
+
+  let previousYieldRateProfitRatio = new BigNumber(0);
+  let firstDayProfitRatio: BigNumber;
+
   dayMapYieldRate.forEach((item, key) => {
     tradeDateList.push(key);
     const {
@@ -128,30 +155,29 @@ const handle = ({
     previousYieldRateProfitRatio = previousYieldRateProfitRatio.plus(
       yieldRateProfitRatioSum,
     );
-    if (typeof firstDayProfitRatio === 'undefined') {
+    if (firstDayProfitRatio === undefined) {
       firstDayProfitRatio = yieldRateProfitRatioSum;
     }
 
     const profitRatioSum = previousYieldRateProfitRatio
-        .minus(firstDayProfitRatio)
-        .toNumber(),
-      baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber(),
-      finalProfitRatioSum = previousYieldRateProfitRatio
-        .minus(firstDayProfitRatio)
-        .plus(yieldRateBaseProfitRatioSum)
-        .toNumber(),
-      changeRateSum = yieldRateChangeRateSum.toNumber();
+      .minus(firstDayProfitRatio)
+      .toNumber();
+    const baseProfitRatioSum = yieldRateBaseProfitRatioSum.toNumber();
+    const finalProfitRatioSum = previousYieldRateProfitRatio
+      .minus(firstDayProfitRatio)
+      .plus(yieldRateBaseProfitRatioSum)
+      .toNumber();
+    const changeRateSum = yieldRateChangeRateSum.toNumber();
 
-    const dayProfitRatioJson = {
+    exportAnalyzeFileData.push({
       tradeDate: key,
       profitRatio: yieldRateProfitRatioSum.toNumber(),
       baseProfitRatio: yieldRateBaseProfitRatioSum.toNumber(),
       profitRatioSum,
       finalProfitRatioSum,
       changeRateSum,
-    };
+    });
 
-    exportAnalyzeFileData.push(dayProfitRatioJson);
     profitRatioSumList.push(profitRatioSum);
     baseProfitRatioSumList.push(baseProfitRatioSum);
     finalProfitRatioSumList.push(finalProfitRatioSum);
@@ -160,11 +186,11 @@ const handle = ({
 
   return {
     exportAnalyzeFileData: exportAnalyzeFileData.slice(1),
-    tradeDateList: tradeDateList.slice(1), // 交易日
-    profitRatioSumList: profitRatioSumList.slice(1), // 增强收益率
-    baseProfitRatioSumList: baseProfitRatioSumList.slice(1), // 股票收益率
-    finalProfitRatioSumList: finalProfitRatioSumList.slice(1), // 最终收益率
-    changeRateSumList: changeRateSumList.slice(1), // 换手率
+    tradeDateList: tradeDateList.slice(1),
+    profitRatioSumList: profitRatioSumList.slice(1),
+    baseProfitRatioSumList: baseProfitRatioSumList.slice(1),
+    finalProfitRatioSumList: finalProfitRatioSumList.slice(1),
+    changeRateSumList: changeRateSumList.slice(1),
   };
 };
 
