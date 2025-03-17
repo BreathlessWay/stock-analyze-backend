@@ -59,7 +59,15 @@ export class AnalyzeController {
     const worksheet = workbook.worksheets[0]; // 获取第一个工作表
     const rows = [];
     const rowDataSchema = Joi.array().items(
-      Joi.string().length(6).required(),
+      Joi.alternatives()
+        .try(
+          Joi.string().length(6),
+          Joi.number()
+            .integer() // 必须是整数
+            .min(100000) // 最小值为 100000
+            .max(999999),
+        )
+        .required(), // 最大值为 999999).required(),
       Joi.number().required(),
     );
     if (!worksheet) {
